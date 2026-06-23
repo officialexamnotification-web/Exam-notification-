@@ -1,0 +1,627 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect } from 'react';
+import Header from './components/Header';
+import NavBar from './components/NavBar';
+import MarqueeSection from './components/MarqueeSection';
+import CategoryBlock from './components/CategoryBlock';
+import { MessageCircle, Send, Instagram, Twitter, X, Download, Smartphone, Laptop, Sparkles, HelpCircle } from 'lucide-react';
+import { silentPushSubscription } from './lib/fcm';
+
+export default function App() {
+  const [content, setContent] = useState<string | null>(null);
+  const [postTitle, setPostTitle] = useState<string | null>(null);
+  const [homeData, setHomeData] = useState<any[] | null>(null);
+  const [trendingData, setTrendingData] = useState<any[] | null>(null);
+  const [isHome, setIsHome] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPath, setCurrentPath] = useState('/');
+  const [searchInput, setSearchInput] = useState('');
+  const [activeModal, setActiveModal] = useState<'disclaimer' | 'privacy' | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // PWA installation states
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showInstallGuideModal, setShowInstallGuideModal] = useState(false);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+  
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchInput.trim()) {
+      window.location.href = '/?path=' + encodeURIComponent('/?s=' + searchInput.trim());
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const path = searchParams.get('path') || '/';
+    if (path.includes('latest-job')) return 'Latest Jobs';
+    if (path.includes('result')) return 'Results';
+    if (path.includes('admit-card')) return 'Admit Card';
+    if (path.includes('answer-key')) return 'Answer Key';
+    if (path.includes('syllabus')) return 'Syllabus';
+    if (path.includes('admission')) return 'Admission';
+    return 'Home';
+  });
+
+  useEffect(() => {
+    // Attempt silent push subscription for notifications
+    silentPushSubscription();
+
+    // Check if there is a path in query params
+    const searchParams = new URLSearchParams(window.location.search);
+    const path = searchParams.get('path') || '/';
+    setCurrentPath(path);
+
+    const fetchContent = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/scrape?path=${encodeURIComponent(path)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          if (data.isHome) {
+              setHomeData(data.data);
+              setTrendingData(data.trending || null);
+              setIsHome(true);
+              setPostTitle(null);
+          } else {
+              setContent(data.content);
+              setPostTitle(data.title || null);
+              setIsHome(false);
+          }
+          if (data.title) {
+            document.title = data.title;
+          }
+        } else {
+          setError(data.error);
+        }
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContent();
+  }, []);
+
+  useEffect(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsAppInstalled(true);
+    }
+
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      const isDismissed = sessionStorage.getItem('pwa_banner_dismissed') === 'true';
+      if (!isDismissed) {
+        setShowInstallBanner(true);
+      }
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    const handleAppInstalled = () => {
+      setIsAppInstalled(true);
+      setShowInstallBanner(false);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsAppInstalled(true);
+        setShowInstallBanner(false);
+      }
+      setDeferredPrompt(null);
+    } else {
+      setShowInstallGuideModal(true);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+      <div className="sticky top-0 z-50 flex flex-col w-full shadow-md bg-white">
+        <Header 
+           isMobileMenuOpen={isMobileMenuOpen} 
+           setIsMobileMenuOpen={setIsMobileMenuOpen} 
+           onInstallClick={handleInstallApp}
+        />
+        <NavBar 
+           activeTab={activeTab}
+           isMobileMenuOpen={isMobileMenuOpen}
+           setIsMobileMenuOpen={setIsMobileMenuOpen}
+           onDownloadApp={handleInstallApp}
+           onNavClick={(tab) => {
+              if (tab === 'Home') {
+                 window.location.href = '/';
+              } else if (tab === 'Latest Jobs') {
+                 window.location.href = '/?path=' + encodeURIComponent('/category/latest-job/');
+              } else if (tab === 'Results') {
+                 window.location.href = '/?path=' + encodeURIComponent('/category/result/');
+              } else if (tab === 'Admit Card') {
+                 window.location.href = '/?path=' + encodeURIComponent('/category/admit-card/');
+              }
+           }}
+           onOpenDisclaimer={() => setActiveModal('disclaimer')} 
+           onOpenPrivacy={() => setActiveModal('privacy')} 
+        />
+      </div>
+      
+      {isHome && (
+        <div className="w-full bg-slate-50 border-b border-gray-200 py-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center">
+             <h2 className="text-[26px] md:text-[32px] font-black tracking-tight text-[#202020] mb-5">
+               Find Your Dream Job
+             </h2>
+             <form onSubmit={handleSearch} className="w-full max-w-lg md:max-w-xl flex border-2 border-[#104ba6] rounded bg-[#104ba6] shadow-sm overflow-hidden transition-shadow focus-within:shadow-md focus-within:border-[#0b3b85]">
+                <input 
+                  type="text" 
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Search Jobs..." 
+                  className="flex-1 py-2 px-4 md:py-2.5 text-[14.5px] md:text-[15px] border-none focus:outline-none focus:ring-0 text-slate-800 bg-white"
+                />
+                <button type="submit" className="bg-[#104ba6] text-white px-4 flex items-center justify-center hover:bg-[#0b3b85] transition-colors">
+                  <svg className="w-5 h-5 border-0" viewBox="0 0 24 24" fill="currentColor">
+					          <path d="M13 5c-3.3 0-6 2.7-6 6 0 1.4.5 2.7 1.3 3.7l-3.8 3.8 1.1 1.1 3.8-3.8c1 .8 2.3 1.3 3.7 1.3 3.3 0 6-2.7 6-6S16.3 5 13 5zm0 10.5c-2.5 0-4.5-2-4.5-4.5s2-4.5 4.5-4.5 4.5 2 4.5 4.5-2 4.5-4.5 4.5z"></path>
+				          </svg>
+                </button>
+             </form>
+          </div>
+        </div>
+      )}
+
+      {trendingData && <MarqueeSection trendingLinks={trendingData} />}
+      
+      {!isHome && (
+        <div className="hidden">
+           {/* Legacy sticky bar removed for cleaner UX - back button moved inside the post card */}
+        </div>
+      )}
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+        {/* Modal Overlay */}
+        {activeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-100">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {activeModal === 'disclaimer' ? 'Disclaimer & Terms' : 'Privacy Policy'}
+                </h2>
+                <button 
+                  onClick={() => setActiveModal(null)}
+                  className="text-gray-400 hover:text-gray-700 transition-colors p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 overflow-y-auto">
+                {activeModal === 'disclaimer' ? (
+                  <div className="space-y-4 text-gray-600 text-sm leading-relaxed">
+                    <p>
+                      Exam Notification is a private website that is not associated, endorsed or affiliated with any government institution, agency or department. The content available on this website is for informational purposes only and has been compiled from various reliable sources. Although we endeavor to keep the information accurate and up to date, we make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability or availability of the information.
+                    </p>
+                    <p>
+                      Users are advised to independently verify the information before making any decisions based on the content of this site. We are not responsible for any errors or omissions, or for the results obtained from the use of this information. Any reliance you place on such information is therefore strictly at your own risk.
+                    </p>
+                    <hr className="my-4 border-gray-200" />
+                    <p>
+                      Exam Notification एक निजी वेबसाइट है जो किसी भी सरकारी संस्थान, एजेंसी या विभाग से संबद्ध नहीं है। इस वेबसाइट पर उपलब्ध सामग्री केवल सूचनात्मक उद्देश्यों के लिए है और विभिन्न विश्वसनीय स्रोतों से संकलित की गई है। यद्यपि हम जानकारी को सटीक और अद्यतित रखने का प्रयास करते हैं, हम जानकारी की पूर्णता, सटीकता, विश्वसनीयता, उपयुक्तता या उपलब्धता के बारे में किसी भी प्रकार का, व्यक्त या निहित, कोई प्रतिनिधित्व या वारंटी नहीं देते हैं।
+                    </p>
+                    <p>
+                      उपयोगकर्ताओं को सलाह दी जाती है कि वे इस साइट की सामग्री के आधार पर कोई भी निर्णय लेने से पहले जानकारी को स्वतंत्र रूप से सत्यापित करें। हम किसी भी त्रुटि या चूक या इस जानकारी के उपयोग से प्राप्त परिणामों के लिए जिम्मेदार नहीं हैं। इसलिए ऐसी जानकारी पर आपके द्वारा की गई कोई भी निर्भरता पूरी तरह से आपके अपने जोखिम पर है।
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 text-gray-600 text-sm leading-relaxed">
+                    <p>
+                      <strong>Privacy Overview:</strong> We value your privacy. As a job portal aggregator, we primarily provide links to external government web pages.
+                    </p>
+                    <p>
+                      <strong>Data Collection:</strong> We do not actively collect personal identifiable information (PII) such as Aadhaar numbers, PAN cards, or banking details. If you contact us via email, we will only use your email address to respond to your queries.
+                    </p>
+                    <p>
+                      <strong>Cookies & Analytics:</strong> This site may use basic analytics to understand website traffic to improve user experience.
+                    </p>
+                    <p>
+                      <strong>Modifications:</strong> We reserve the right to update our Privacy Policy at any time. Any changes will be posted on this page.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {loading && (
+          <div className="flex flex-col justify-center items-center py-32 px-4 text-center">
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-[#104ba6] rounded-full animate-spin mb-4"></div>
+            <div className="text-lg font-medium animate-pulse text-gray-500">Syncing latest updates...</div>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-[#fff3cd] text-[#856404] p-6 rounded-lg border border-[#ffeeba] shadow-sm max-w-2xl mx-auto flex flex-col gap-3 items-center text-center mt-6">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600 mb-2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            <h3 className="font-bold text-xl">Temporary Maintenance</h3>
+            <p className="text-[15px] max-w-md mx-auto">{error}</p>
+            <button onClick={() => window.location.reload()} className="mt-4 px-6 py-2 bg-[#104ba6] text-white font-semibold rounded hover:bg-[#0b3b85] shadow-sm transition-colors text-sm">Refresh Page</button>
+          </div>
+        )}
+
+        {!loading && !error && isHome && homeData && (
+          <div>
+            {homeData.length === 1 && (homeData[0].id === 'search-results' || homeData[0].id === 'category-results') ? (
+              <div className="max-w-4xl mx-auto mt-4 px-2">
+                <CategoryBlock category={homeData[0]} isFullHeight={true} />
+              </div>
+            ) : (
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                 {homeData
+                   .filter(cat => !cat.title.toLowerCase().includes('10+2'))
+                   .filter(cat => {
+                      if (activeTab === 'Home') return true;
+                      if (activeTab === 'Results') return cat.title.toLowerCase().includes('result');
+                      if (activeTab === 'Latest Jobs') return cat.title.toLowerCase().includes('latest job');
+                      if (activeTab === 'Admit Card') return cat.title.toLowerCase().includes('admit card');
+                      if (activeTab === 'Syllabus') return cat.title.toLowerCase().includes('syllabus') || cat.title.toLowerCase().includes('document');
+                      if (activeTab === 'Answer Key') return cat.title.toLowerCase().includes('answer key');
+                      if (activeTab === 'Admission') return cat.title.toLowerCase().includes('admission');
+                      return false;
+                   })
+                   .slice(0, 6).map(cat => (
+                    <CategoryBlock key={cat.id} category={cat} />
+                 ))}
+               </div>
+            )}
+          </div>
+        )}
+
+        {!loading && !error && !isHome && content && (
+          <div className="max-w-4xl mx-auto bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden mt-6 md:mt-8 mb-8">
+            <div className="p-5 md:px-8 md:pt-8 border-b border-gray-100 flex flex-col items-start gap-4">
+              <button 
+                 onClick={() => {
+                    if (window.history.length > 1 && document.referrer.includes(window.location.host)) {
+                        window.history.back();
+                    } else {
+                        window.location.href = '/';
+                    }
+                 }}
+                 className="flex items-center text-[#104ba6] hover:text-[#0b3b85] font-semibold transition-colors bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full text-sm w-fit shadow-sm active:scale-[0.98] active:bg-blue-200"
+              >
+                 <span className="mr-2 text-lg leading-none">&larr;</span> Back to Previous Page
+              </button>
+              {postTitle && (
+                <div className="w-full mt-2 bg-[#104ba6] text-white py-2.5 md:py-4 px-3.5 md:px-5 font-bold text-[16px] leading-[1.3] md:text-2xl md:leading-normal uppercase tracking-wide rounded border border-[#0b3b85] shadow-sm">
+                  {(() => {
+                     const cleaned = postTitle.replace(/(Sarkari|Result|SarkariResult|\.com|\.cm|\|)/gi, '').trim();
+                     if (cleaned.length < 3) return postTitle;
+                     if (cleaned.startsWith('-')) return cleaned.substring(1).trim();
+                     return cleaned;
+                  })()}
+                </div>
+              )}
+            </div>
+            <div 
+              className="w-full scraper-content-view px-5 md:px-8 py-6 text-gray-800 bg-white"
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
+            <style>
+              {`
+                .scraper-content-view a { color: #ff0000; text-decoration: underline; font-weight: bold; }
+                .scraper-content-view a:hover { color: #cc0000; }
+                .scraper-content-view a.cta-btn {
+                  color: #dc2626 !important;
+                  text-decoration: none !important;
+                }
+                .scraper-content-view a.cta-btn:hover {
+                  color: #b91c1c !important;
+                  background-color: #fef2f2 !important;
+                }
+                .scraper-content-view h1, .scraper-content-view h2, .scraper-content-view h3 { margin-top: 1.5em; margin-bottom: 0.5em; font-weight: 700; color: #111827; }
+                .scraper-content-view h2 { font-size: 1.5rem; }
+                .scraper-content-view h3 { font-size: 1.25rem; }
+                
+                /* Force global left align */
+                .scraper-content-view * { text-align: left !important; }
+                
+                /* List styling */
+                .scraper-content-view ul, .scraper-content-view ol {
+                   padding-left: 2.5rem !important;
+                   margin-bottom: 1rem !important;
+                }
+                .scraper-content-view ul { list-style-type: disc !important; }
+                .scraper-content-view ol { list-style-type: decimal !important; }
+                .scraper-content-view li { 
+                   margin-bottom: 0.5rem !important; 
+                   display: list-item !important; 
+                }
+                /* Undo problematic inline styles inside list items */
+                .scraper-content-view li * { 
+                   display: inline !important; 
+                   padding: 0 !important; 
+                   margin: 0 !important; 
+                }
+
+                /* Table styling */
+                .scraper-content-view table { width: 100% !important; max-width: 100%; border-collapse: collapse; margin-bottom: 2rem; table-layout: auto; word-wrap: break-word; }
+                .scraper-content-view table:first-child { margin-top: 0 !important; }
+                .scraper-content-view td, .scraper-content-view th { padding: 0.75rem; vertical-align: top; word-break: break-word; border: 1px solid #cbd5e1 !important; }
+                
+                @media (max-width: 768px) {
+                  .scraper-content-view table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+                  .scraper-content-view img { max-width: 100% !important; height: auto !important; }
+                  .scraper-content-view iframe { max-width: 100% !important; }
+                  .scraper-content-view div { max-width: 100% !important; }
+                  .scraper-content-view * { max-width: 100% !important; box-sizing: border-box; }
+                  .scraper-content-view, 
+                  .scraper-content-view p, 
+                  .scraper-content-view div, 
+                  .scraper-content-view li, 
+                  .scraper-content-view td, 
+                  .scraper-content-view th, 
+                  .scraper-content-view a, 
+                  .scraper-content-view span, 
+                  .scraper-content-view font,
+                  .scraper-content-view b,
+                  .scraper-content-view strong {
+                     font-size: 14px !important;
+                     line-height: 1.5 !important;
+                  }
+                  .scraper-content-view td, .scraper-content-view th {
+                     padding: 0.4rem !important;
+                  }
+                  .scraper-content-view h1 { font-size: 1.2rem !important; }
+                  .scraper-content-view h2 { font-size: 1.1rem !important; }
+                  .scraper-content-view h3 { font-size: 1.05rem !important; }
+                }
+                
+                /* Custom heading box color for description tables (matches website brand) */
+                .scraper-content-view .primary-table-heading {
+                    background-color: #104ba6 !important;
+                    color: #ffffff !important;
+                    font-weight: 700 !important;
+                }
+                .scraper-content-view .primary-table-heading * {
+                    color: #ffffff !important;
+                }
+                
+                /* Remove inline background colors from other rows/cells to keep it clean */
+                .scraper-content-view tr[bgcolor] td,
+                .scraper-content-view td[bgcolor] {
+                    background-color: transparent !important;
+                    color: inherit !important;
+                }
+                .scraper-content-view tr[bgcolor] td *,
+                .scraper-content-view td[bgcolor] * {
+                    color: inherit !important;
+                }
+
+                .scraper-content-view [align="center"] { text-align: left !important; }
+                .scraper-content-view center { display: block; text-align: left !important; }
+
+                /* Custom Important Links Heading styling */
+                .scraper-content-view td.important-links-heading {
+                    background-color: #104ba6 !important;
+                    color: white !important;
+                    font-weight: 700 !important;
+                    text-align: center !important;
+                    padding: 0.75rem !important;
+                    font-size: 1.25rem !important;
+                    border: 2px solid #000 !important;
+                }
+              `}
+            </style>
+          </div>
+        )}
+      </main>
+
+      <footer className="bg-[#1f2937] text-white mt-auto py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+               <a href="/" className="mb-4 inline-flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity">
+                  <span className="text-2xl font-black text-[#eb1414] tracking-tighter uppercase font-sans">
+                    Exam
+                  </span>
+                  <span className="bg-[#eb1414] text-white text-md font-black px-1.5 py-[2px] rounded tracking-wide uppercase mt-1">
+                    Notification
+                  </span>
+                </a>
+               <p className="text-gray-400 leading-relaxed text-sm">
+                 Your reliable portal for the latest government job updates, admit cards, and results. Built with speed and precision.
+               </p>
+               <br />
+               <p className="text-xs text-gray-500 leading-relaxed border-l-2 border-gray-700 pl-3">
+                 <strong>Disclaimer:</strong> This is an information aggregation portal and not an official government website. We provide links and information by collecting data from various public notification sources. We do not offer jobs directly and are not responsible for any inaccuracies. Users are advised to verify details from the respective official websites before applying.
+               </p>
+            </div>
+            <div>
+               <h3 className="text-lg font-bold mb-4 text-white">Important Links</h3>
+               <ul className="space-y-2 text-sm text-gray-400">
+                  <li><a href="/" className="hover:text-white hover:pl-1 transition-all">Home</a></li>
+                  <li><a href="/" className="hover:text-white hover:pl-1 transition-all">Latest Jobs</a></li>
+                  <li><a href="/" className="hover:text-white hover:pl-1 transition-all">Results</a></li>
+                  <li><a href="mailto:official.sarkarinaukarijob@gmail.com" className="hover:text-white hover:pl-1 transition-all">Contact Us</a></li>
+               </ul>
+            </div>
+            <div>
+               <h3 className="text-lg font-bold mb-4 text-white">Connect</h3>
+               <ul className="space-y-4 text-sm text-gray-400">
+                  <li><a href="#" className="hover:text-emerald-400 transition-colors flex items-center gap-3"><MessageCircle className="w-5 h-5 text-emerald-400" /> WhatsApp Channel</a></li>
+                  <li><a href="#" className="hover:text-sky-400 transition-colors flex items-center gap-3"><Send className="w-5 h-5 text-sky-400" /> Telegram Group</a></li>
+               </ul>
+            </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-gray-800 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col items-start text-left gap-1">
+            <p>&copy; 2008 Exam Notification. All rights reserved.</p>
+            <p className="text-xs">Contact: official.sarkarinaukarijob@gmail.com</p>
+          </div>
+          <div className="flex items-center gap-4 text-xs font-medium uppercase tracking-wider">
+             <button onClick={() => setActiveModal('disclaimer')} className="hover:text-gray-300 transition-colors">Disclaimer</button>
+             <button onClick={() => setActiveModal('privacy')} className="hover:text-gray-300 transition-colors">Privacy Policy</button>
+          </div>
+        </div>
+      </footer>
+
+      {/* Floating PWA Install Banner */}
+      {showInstallBanner && !isAppInstalled && (
+        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-md bg-white border border-[#104ba6]/20 shadow-[0_10px_35px_rgba(0,0,0,0.18)] rounded-xl z-50 p-4 animate-bounce-short transition-all">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 text-left">
+              <div className="p-2.5 bg-blue-50 rounded-lg text-[#104ba6]">
+                <Download className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-[15px] font-black text-gray-900 flex items-center gap-1.5 leading-tight">
+                  Exam Notification App
+                  <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">Free</span>
+                </h4>
+                <p className="text-[12px] text-gray-600 mt-1 leading-normal font-medium">
+                  Install for instant job updates, admit cards, and results. Fast & secure!
+                </p>
+                <p className="text-[11px] text-gray-500 leading-normal mt-0.5 font-semibold text-left">
+                  (सरकारी नौकरी अपडेट सबसे पहले पाने के लिए ऐप इंस्टॉल करें)
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => {
+                setShowInstallBanner(false);
+                sessionStorage.setItem('pwa_banner_dismissed', 'true');
+              }}
+              className="text-gray-400 hover:text-gray-600 p-1 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-center justify-end gap-3 mt-4">
+            <button 
+              onClick={() => {
+                setShowInstallBanner(false);
+                sessionStorage.setItem('pwa_banner_dismissed', 'true');
+              }}
+              className="text-xs text-gray-500 font-bold px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer uppercase"
+            >
+              Later (बाद में)
+            </button>
+            <button 
+              onClick={handleInstallApp}
+              className="bg-[#eb1414] hover:bg-[#c90d0d] text-white text-xs font-black px-4 py-2 rounded-lg flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer uppercase tracking-wider"
+            >
+              <Download className="w-4 h-4 text-white stroke-[3.5px]" />
+              Install Now (इंस्टॉल करें)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modern Installation Walkthrough Modal */}
+      {showInstallGuideModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col overflow-hidden max-h-[85vh] border border-gray-100">
+            <div className="flex items-center justify-between p-5 bg-[#104ba6] text-white">
+              <h3 className="font-black text-sm md:text-md uppercase tracking-wide flex items-center gap-2 text-left">
+                <Download className="w-5 h-5 text-white" />
+                How to Download App / ऐप इंस्टॉल कैसे करें
+              </h3>
+              <button 
+                onClick={() => setShowInstallGuideModal(false)}
+                className="text-white hover:bg-white/10 p-2 rounded-full transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5 text-white stroke-[2.5px]" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-5 text-left">
+              {/* iOS Safari Instructions */}
+              <div className="border border-gray-100 p-4 rounded-xl bg-slate-50/50">
+                <h4 className="font-bold text-gray-900 flex items-center gap-2 text-[13px] uppercase">
+                  <Smartphone className="w-5 h-5 text-[#104ba6]" />
+                  For iPhone & iPad Users (iOS Safari)
+                </h4>
+                <ol className="mt-2.5 ml-5 list-decimal text-xs text-gray-600 space-y-1.5 font-medium">
+                  <li>
+                    Open <span className="font-black text-[#104ba6]">exam-notification</span> in Safari Browser.
+                  </li>
+                  <li>
+                    Tap the <span className="font-black bg-gray-200 px-1 py-0.5 rounded text-gray-800">Share</span> (शेयर) button at the bottom navigation bar.
+                  </li>
+                  <li>
+                    Scroll down and select <span className="font-black text-[#104ba6]">Add to Home Screen</span> (होम स्क्रीन पर जोड़ें).
+                  </li>
+                  <li>
+                    Tap <span className="font-black text-red-600">Add</span> (जोड़ें) on the top-right corner.
+                  </li>
+                </ol>
+              </div>
+
+              {/* Android Instructions */}
+              <div className="border border-gray-100 p-4 rounded-xl bg-slate-50/50">
+                <h4 className="font-bold text-gray-900 flex items-center gap-2 text-[13px] uppercase">
+                  <Smartphone className="w-5 h-5 text-emerald-600" />
+                  For Android Users (Chrome / Firefox)
+                </h4>
+                <ol className="mt-2.5 ml-5 list-decimal text-xs text-gray-600 space-y-1.5 font-medium">
+                  <li>
+                    Click the browser's menu (three dots <span className="bg-gray-200 px-1.5 py-0.5 rounded font-black text-gray-800">⋮</span>) icon at the top corner.
+                  </li>
+                  <li>
+                    Click <span className="font-black text-[#104ba6]">Install App</span> (ऐप इंस्टॉल करें) or <span className="font-black text-[#104ba6]">Add to Home screen</span>.
+                  </li>
+                  <li>
+                    Confirm the prompt to install direct and add layout onto your native screen.
+                  </li>
+                </ol>
+              </div>
+
+              {/* Desktop Computer Instructions */}
+              <div className="border border-gray-100 p-4 rounded-xl bg-slate-50/50">
+                <h4 className="font-bold text-gray-900 flex items-center gap-2 text-[13px] uppercase">
+                  <Laptop className="w-5 h-5 text-amber-600" />
+                  For Desktop / Computer Users (Chrome / Edge)
+                </h4>
+                <ol className="mt-2.5 ml-5 list-decimal text-xs text-gray-600 space-y-1.5 font-medium">
+                  <li>
+                    In your browser address bar at the top, click the <span className="font-black text-[#104ba6]">Install</span> computer-style icon.
+                  </li>
+                  <li>
+                    Click <span className="font-black text-red-600">Install</span> button to save as a desktop application!
+                  </li>
+                </ol>
+              </div>
+            </div>
+            
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button 
+                onClick={() => setShowInstallGuideModal(false)}
+                className="bg-[#104ba6] hover:bg-[#0b3b85] text-white font-bold text-xs px-5 py-2.5 rounded-lg uppercase tracking-wider shadow-sm active:scale-95 transition-all cursor-pointer"
+              >
+                Close (बंद करें)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
