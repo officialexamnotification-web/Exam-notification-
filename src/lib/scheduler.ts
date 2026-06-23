@@ -463,30 +463,37 @@ export async function scrapeJobPost(db: any, path: string, isNew: boolean = true
         $table.removeAttr('color');
         // Clean leading empty space / br / p in table cells
         $table.find('td, th').each((_, cell) => {
-             while (cell.firstChild) {
-                  const child = cell.firstChild;
-                  if (child.nodeType === 3) { // TEXT_NODE
-                       if ((child.nodeValue || '').trim().replace(/\u00a0/g, '') === '') {
-                            cell.removeChild(child);
+             const $cell = $(cell);
+             let clean = false;
+             let safeBreaker = 0;
+             while (!clean && safeBreaker < 50) {
+                  safeBreaker++;
+                  const first = $cell.contents().first();
+                  if (!first || first.length === 0) {
+                       break;
+                  }
+                  const node = first[0] as any;
+                  if (node.nodeType === 3 || node.type === 'text') {
+                       if ((node.data || node.nodeValue || '').trim().replace(/\u00a0/g, '') === '') {
+                            first.remove();
                        } else {
-                            break;
+                            clean = true;
                        }
-                  } else if (child.nodeType === 1) { // ELEMENT_NODE
-                       const el = child as HTMLElement;
-                       if (el.tagName.toLowerCase() === 'br') {
-                            cell.removeChild(child);
-                       } else if (el.tagName.toLowerCase() === 'p') {
-                            const pText = el.textContent || '';
-                            if (pText.trim().replace(/\u00a0/g, '') === '' && !el.querySelector('img')) {
-                                 cell.removeChild(child);
+                  } else if (node.nodeType === 1 || node.type === 'tag') {
+                       const tagName = (node.tagName || node.name || '').toLowerCase();
+                       if (tagName === 'br') {
+                            first.remove();
+                       } else if (tagName === 'p') {
+                            if (first.text().trim().replace(/\u00a0/g, '') === '' && first.find('img').length === 0) {
+                                 first.remove();
                             } else {
-                                 break;
+                                 clean = true;
                             }
                        } else {
-                            break;
+                            clean = true;
                        }
                   } else {
-                       break;
+                       clean = true;
                   }
              }
         });
