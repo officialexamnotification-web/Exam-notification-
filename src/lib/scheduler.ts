@@ -461,6 +461,35 @@ export async function scrapeJobPost(db: any, path: string, isNew: boolean = true
 
         $table.removeAttr('bgcolor');
         $table.removeAttr('color');
+        // Clean leading empty space / br / p in table cells
+        $table.find('td, th').each((_, cell) => {
+             while (cell.firstChild) {
+                  const child = cell.firstChild;
+                  if (child.nodeType === 3) { // TEXT_NODE
+                       if ((child.nodeValue || '').trim().replace(/\u00a0/g, '') === '') {
+                            cell.removeChild(child);
+                       } else {
+                            break;
+                       }
+                  } else if (child.nodeType === 1) { // ELEMENT_NODE
+                       const el = child as HTMLElement;
+                       if (el.tagName.toLowerCase() === 'br') {
+                            cell.removeChild(child);
+                       } else if (el.tagName.toLowerCase() === 'p') {
+                            const pText = el.textContent || '';
+                            if (pText.trim().replace(/\u00a0/g, '') === '' && !el.querySelector('img')) {
+                                 cell.removeChild(child);
+                            } else {
+                                 break;
+                            }
+                       } else {
+                            break;
+                       }
+                  } else {
+                       break;
+                  }
+             }
+        });
 
         // Apply the precise high contrast table specifications
         $table.addClass('w-full border-collapse border-2 border-black my-6 text-sm md:text-base bg-white shadow-sm table-auto');
