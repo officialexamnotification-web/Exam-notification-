@@ -54,17 +54,21 @@ export default function App() {
   });
 
   useEffect(() => {
-    // Check admin mode from URL parameter or localStorage
+    // Secure admin mode with secret key
+    const SECRET_ADMIN_KEY = 'exam_notification_admin_secret_2024_secure_key';
     const searchParams = new URLSearchParams(window.location.search);
-    const adminParam = searchParams.get('admin');
-    const storedAdmin = localStorage.getItem('admin_mode');
+    const adminKey = searchParams.get('admin_key');
+    const storedAdmin = localStorage.getItem('admin_auth');
     
-    if (adminParam === 'true') {
-      localStorage.setItem('admin_mode', 'true');
+    if (adminKey === SECRET_ADMIN_KEY) {
+      localStorage.setItem('admin_auth', 'true');
       setIsAdmin(true);
-    } else if (adminParam === 'false') {
-      localStorage.removeItem('admin_mode');
+      // Remove the key from URL for security
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.search.replace(/[?&]admin_key=[^&]+/, '').replace(/^&/, '?'));
+    } else if (adminKey === 'logout') {
+      localStorage.removeItem('admin_auth');
       setIsAdmin(false);
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.search.replace(/[?&]admin_key=[^&]+/, '').replace(/^&/, '?'));
     } else if (storedAdmin === 'true') {
       setIsAdmin(true);
     }

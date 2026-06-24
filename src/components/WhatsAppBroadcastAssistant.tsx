@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, Copy, Check, Share2, Sparkles } from 'lucide-react';
+import { MessageCircle, Copy, Check, Share2, Sparkles, LogOut } from 'lucide-react';
 
 interface WhatsAppBroadcastAssistantProps {
   postTitle: string | null;
@@ -52,6 +52,10 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
     window.open(whatsappUrl, '_blank');
   };
 
+  const handleLogout = () => {
+    window.location.href = '/?admin_key=logout';
+  };
+
   return (
     <div className="bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white p-4 md:p-5 rounded-xl shadow-lg mb-6 border border-green-400/30">
       <div className="flex items-center justify-between mb-4">
@@ -59,15 +63,24 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
           <MessageCircle className="w-5 h-5 md:w-6 md:h-6" />
           <h3 className="font-bold text-sm md:text-base uppercase tracking-wide">WhatsApp Broadcast Assistant</h3>
         </div>
-        <button 
-          onClick={onClose}
-          className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-full transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleLogout}
+            className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-full transition-colors"
+            title="Logout Admin"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={onClose}
+            className="text-white/80 hover:text-white hover:bg-white/20 p-1.5 rounded-full transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="space-y-3">
