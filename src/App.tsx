@@ -11,6 +11,7 @@ import CategoryBlock from './components/CategoryBlock';
 import WhatsAppBroadcastAssistant from './components/WhatsAppBroadcastAssistant';
 import { MessageCircle, Send, Instagram, Twitter, X, Download, Smartphone, Laptop, Sparkles, HelpCircle } from 'lucide-react';
 import { silentPushSubscription } from './lib/fcm';
+import { useSearchParams, useLocation } from 'react-router-dom';
 
 export default function App() {
   const [content, setContent] = useState<string | null>(null);
@@ -34,17 +35,24 @@ export default function App() {
   // Admin mode state
   const [isAdmin, setIsAdmin] = useState(false);
   
+  // React Router hooks
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
-      window.location.href = '/?path=' + encodeURIComponent('/?s=' + searchInput.trim());
+      window.location.href = `/search?q=${encodeURIComponent(searchInput.trim())}`;
     }
   };
 
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const path = searchParams.get('path') || '/';
-    if (path.includes('latest-job')) return 'Latest Jobs';
+    // Support both clean URLs and old ?path= URLs
+    const pathParam = searchParams.get('path');
+    const cleanPath = location.pathname;
+    const path = pathParam || cleanPath || '/';
+    
+    if (path.includes('latest-job') || path.includes('search')) return 'Latest Jobs';
     if (path.includes('result')) return 'Results';
     if (path.includes('admit-card')) return 'Admit Card';
     if (path.includes('answer-key')) return 'Answer Key';
@@ -56,7 +64,6 @@ export default function App() {
   useEffect(() => {
     // Secure admin mode with secret key - NO localStorage fallback for security
     const SECRET_ADMIN_KEY = 'exam_notification_admin_secret_2024_secure_key';
-    const searchParams = new URLSearchParams(window.location.search);
     const adminKey = searchParams.get('admin_key');
     
     if (adminKey === SECRET_ADMIN_KEY) {
@@ -90,8 +97,10 @@ export default function App() {
     // Attempt silent push subscription for notifications
     silentPushSubscription();
 
-    // Check if there is a path in query params
-    const path = searchParams.get('path') || '/';
+    // Support both clean URLs and old ?path= URLs for backward compatibility
+    const pathParam = searchParams.get('path');
+    const cleanPath = location.pathname;
+    const path = pathParam || cleanPath || '/';
     setCurrentPath(path);
 
     const fetchContent = async () => {

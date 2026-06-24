@@ -18,7 +18,8 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
 
   const getFullLink = () => {
     const baseUrl = window.location.origin;
-    return `${baseUrl}/?path=${encodeURIComponent(currentPath)}`;
+    // Use clean URLs instead of ?path= parameter
+    return `${baseUrl}${currentPath}`;
   };
 
   const generateWhatsAppMessage = () => {

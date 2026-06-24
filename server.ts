@@ -751,7 +751,7 @@ for (const [key, value] of serverCache.entries()) {
                       link: {
                           id,
                           title,
-                          url: `/?path=${encodeURIComponent(path)}`,
+                          url: path, // Use clean URLs instead of ?path=
                           isNew
                       },
                       score
@@ -894,6 +894,16 @@ for (const [key, value] of serverCache.entries()) {
       console.error(error);
       res.status(500).json({ success: false, error: "Internal server error reading from database" });
     }
+  });
+
+  // 301 redirect for old ?path= URLs to clean URLs
+  app.use((req, res, next) => {
+    if (req.query.path && typeof req.query.path === 'string') {
+      const oldPath = req.query.path;
+      // Redirect to clean URL
+      return res.redirect(301, oldPath);
+    }
+    next();
   });
 
   // Vite middleware for development
