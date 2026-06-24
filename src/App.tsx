@@ -54,23 +54,37 @@ export default function App() {
   });
 
   useEffect(() => {
-    // Secure admin mode with secret key
+    // Secure admin mode with secret key - NO localStorage fallback for security
     const SECRET_ADMIN_KEY = 'exam_notification_admin_secret_2024_secure_key';
     const searchParams = new URLSearchParams(window.location.search);
     const adminKey = searchParams.get('admin_key');
-    const storedAdmin = localStorage.getItem('admin_auth');
     
     if (adminKey === SECRET_ADMIN_KEY) {
       localStorage.setItem('admin_auth', 'true');
+      localStorage.setItem('admin_auth_timestamp', Date.now().toString());
       setIsAdmin(true);
       // Remove the key from URL for security
       window.history.replaceState({}, document.title, window.location.pathname + window.location.search.replace(/[?&]admin_key=[^&]+/, '').replace(/^&/, '?'));
     } else if (adminKey === 'logout') {
       localStorage.removeItem('admin_auth');
+      localStorage.removeItem('admin_auth_timestamp');
       setIsAdmin(false);
       window.history.replaceState({}, document.title, window.location.pathname + window.location.search.replace(/[?&]admin_key=[^&]+/, '').replace(/^&/, '?'));
-    } else if (storedAdmin === 'true') {
-      setIsAdmin(true);
+    } else {
+      // Check localStorage but ONLY if it was set in this session
+      const storedAdmin = localStorage.getItem('admin_auth');
+      const storedTimestamp = localStorage.getItem('admin_auth_timestamp');
+      const now = Date.now();
+      
+      // Only allow if stored less than 1 hour ago (session-based security)
+      if (storedAdmin === 'true' && storedTimestamp && (now - parseInt(storedTimestamp)) < 3600000) {
+        setIsAdmin(true);
+      } else {
+        // Clear expired or invalid sessions
+        localStorage.removeItem('admin_auth');
+        localStorage.removeItem('admin_auth_timestamp');
+        setIsAdmin(false);
+      }
     }
 
     // Attempt silent push subscription for notifications
