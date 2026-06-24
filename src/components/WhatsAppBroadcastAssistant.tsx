@@ -8,10 +8,12 @@ interface WhatsAppBroadcastAssistantProps {
 }
 
 export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onClose }: WhatsAppBroadcastAssistantProps) {
-  const [organization, setOrganization] = useState('UPSC');
   const [postName, setPostName] = useState(postTitle || 'Exam Notification');
-  const [eligibility, setEligibility] = useState('Graduate');
+  const [startDate, setStartDate] = useState('15/06/2026');
   const [lastDate, setLastDate] = useState('15/07/2026');
+  const [totalPosts, setTotalPosts] = useState('100+');
+  const [category, setCategory] = useState('Latest Jobs');
+  const [whatsappChannel, setWhatsappChannel] = useState('https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d');
   const [copied, setCopied] = useState(false);
 
   const getFullLink = () => {
@@ -22,23 +24,29 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
   const generateWhatsAppMessage = () => {
     const link = getFullLink();
     
-    return `*🚨 NEW EXAM / JOB UPDATE 🚨*
+    return `� NEW JOB UPDATE
 
-📢 *${organization}*
+� ${postName}
 
-📌 Post Name: ${postName}
-🎓 Eligibility: ${eligibility}
-📅 Last Date: ${lastDate}
+➡️ Start Date : ${startDate}
+➡️ Last Date : ${lastDate}
+➡️ Total Posts : ${totalPosts}
 
-🔗 Apply Online & Full Details here:
-👉 ${link}
+#GovExamNotification #${category.replace(/\s+/g, '')}
 
-━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━
 
-📢 Join our WhatsApp Channel for instant job alerts:
-👉 https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d
+🌐 Official Exam Notification Portal 👇
 
-👉 Please Share this with your friends! 🙏`;
+Click Below Link To Check Full Details 👇
+
+${link}
+
+━━━━━━━━━━━━━━
+
+📢 Join Our Official WhatsApp Channel 👇
+
+${whatsappChannel}`;
   };
 
   const handleCopy = async () => {
@@ -92,18 +100,6 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
       <div className="space-y-3">
         <div>
           <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
-            Organization Name (संस्था का नाम)
-          </label>
-          <input
-            type="text"
-            value={organization}
-            onChange={(e) => setOrganization(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
-            placeholder="e.g., UPSC, SSC, Railway"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
             Post Name (वैकेंसी का नाम)
           </label>
           <input
@@ -116,14 +112,14 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
         </div>
         <div>
           <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
-            Eligibility (योग्यता)
+            Start Date (आरंभ तिथि)
           </label>
           <input
             type="text"
-            value={eligibility}
-            onChange={(e) => setEligibility(e.target.value)}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
             className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
-            placeholder="e.g., Graduate, 12th, 10th"
+            placeholder="e.g., 15/06/2026"
           />
         </div>
         <div>
@@ -136,6 +132,42 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
             onChange={(e) => setLastDate(e.target.value)}
             className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
             placeholder="e.g., 15/07/2026"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
+            Total Posts (कुल पद)
+          </label>
+          <input
+            type="text"
+            value={totalPosts}
+            onChange={(e) => setTotalPosts(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
+            placeholder="e.g., 100+, 500, 1000"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
+            Category (श्रेणी)
+          </label>
+          <input
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
+            placeholder="e.g., Latest Jobs, Results, Admit Card"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
+            WhatsApp Channel Link
+          </label>
+          <input
+            type="text"
+            value={whatsappChannel}
+            onChange={(e) => setWhatsappChannel(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
+            placeholder="https://whatsapp.com/channel/..."
           />
         </div>
 
