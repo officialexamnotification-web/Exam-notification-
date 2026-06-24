@@ -8,7 +8,10 @@ interface WhatsAppBroadcastAssistantProps {
 }
 
 export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onClose }: WhatsAppBroadcastAssistantProps) {
-  const [tagline, setTagline] = useState('Sarkari Updates Sabse Pehle');
+  const [organization, setOrganization] = useState('UPSC');
+  const [postName, setPostName] = useState(postTitle || 'Exam Notification');
+  const [eligibility, setEligibility] = useState('Graduate');
+  const [lastDate, setLastDate] = useState('15/07/2026');
   const [copied, setCopied] = useState(false);
 
   const getFullLink = () => {
@@ -18,21 +21,18 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
 
   const generateWhatsAppMessage = () => {
     const link = getFullLink();
-    const title = postTitle || 'Exam Notification';
     
-    return `🌟 EXAM NOTIFICATION 🌟
-🏆 ${tagline}
-
-━━━━━━━━━━━━━━━━━━━━━━
-
-📌 ${title}
-
-━━━━━━━━━━━━━━━━━━━━━━
-
-📅 Apply Online & Full Details here:
+    return `🚨 NEW EXAM / JOB UPDATE 🚨
+📢 ${organization}
+📌 Post Name: ${postName}
+🎓 Eligibility: ${eligibility}
+� Last Date: ${lastDate}
+� Apply Online & Full Details here:
 👉 ${link}
-
-━━━━━━━━━━━━━━━━━━━━━━`;
+━━━━━━━━━━━━━━━━━━━
+📢 Join our WhatsApp Channel for instant job alerts:
+👉 https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d
+👉 Please Share this with your friends! 🙏`;
   };
 
   const handleCopy = async () => {
@@ -86,14 +86,50 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
       <div className="space-y-3">
         <div>
           <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
-            Website Tagline / Motto
+            Organization Name (संस्था का नाम)
           </label>
           <input
             type="text"
-            value={tagline}
-            onChange={(e) => setTagline(e.target.value)}
+            value={organization}
+            onChange={(e) => setOrganization(e.target.value)}
             className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
-            placeholder="Enter tagline..."
+            placeholder="e.g., UPSC, SSC, Railway"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
+            Post Name (वैकेंसी का नाम)
+          </label>
+          <input
+            type="text"
+            value={postName}
+            onChange={(e) => setPostName(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
+            placeholder="e.g., Civil Services, Group D"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
+            Eligibility (योग्यता)
+          </label>
+          <input
+            type="text"
+            value={eligibility}
+            onChange={(e) => setEligibility(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
+            placeholder="e.g., Graduate, 12th, 10th"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
+            Last Date (अंतिम तिथि)
+          </label>
+          <input
+            type="text"
+            value={lastDate}
+            onChange={(e) => setLastDate(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
+            placeholder="e.g., 15/07/2026"
           />
         </div>
 
