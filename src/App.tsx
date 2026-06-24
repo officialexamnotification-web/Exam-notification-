@@ -62,6 +62,41 @@ export default function App() {
   });
 
   useEffect(() => {
+    // Update document title and meta tags for SEO and social media
+    if (postTitle && !isHome) {
+      document.title = `${postTitle} - Exam Notification`;
+      
+      // Update Open Graph meta tags dynamically
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      const ogDescription = document.querySelector('meta[property="og:description"]');
+      const ogUrl = document.querySelector('meta[property="og:url"]');
+      const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+      const twitterDescription = document.querySelector('meta[name="twitter:description"]');
+      
+      if (ogTitle) ogTitle.setAttribute('content', `${postTitle} - Exam Notification`);
+      if (ogDescription) ogDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
+      if (ogUrl) ogUrl.setAttribute('content', `${window.location.origin}${currentPath}`);
+      if (twitterTitle) twitterTitle.setAttribute('content', `${postTitle} - Exam Notification`);
+      if (twitterDescription) twitterDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
+    } else {
+      document.title = 'Exam Notification - Latest Jobs & Results';
+      
+      // Reset meta tags for home page
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      const ogDescription = document.querySelector('meta[property="og:description"]');
+      const ogUrl = document.querySelector('meta[property="og:url"]');
+      const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+      const twitterDescription = document.querySelector('meta[name="twitter:description"]');
+      
+      if (ogTitle) ogTitle.setAttribute('content', 'Exam Notification - Latest Jobs & Results');
+      if (ogDescription) ogDescription.setAttribute('content', 'Get latest government job notifications, results, admit cards, and exam updates in India.');
+      if (ogUrl) ogUrl.setAttribute('content', window.location.origin);
+      if (twitterTitle) twitterTitle.setAttribute('content', 'Exam Notification - Latest Jobs & Results');
+      if (twitterDescription) twitterDescription.setAttribute('content', 'Get latest government job notifications, results, admit cards, and exam updates in India.');
+    }
+  }, [postTitle, isHome, currentPath]);
+
+  useEffect(() => {
     // Secure admin mode with secret key - NO localStorage fallback for security
     const SECRET_ADMIN_KEY = 'exam_notification_admin_secret_2024_secure_key';
     const adminKey = searchParams.get('admin_key');
