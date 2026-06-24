@@ -8,6 +8,7 @@ import Header from './components/Header';
 import NavBar from './components/NavBar';
 import MarqueeSection from './components/MarqueeSection';
 import CategoryBlock from './components/CategoryBlock';
+import WhatsAppBroadcastAssistant from './components/WhatsAppBroadcastAssistant';
 import { MessageCircle, Send, Instagram, Twitter, X, Download, Smartphone, Laptop, Sparkles, HelpCircle } from 'lucide-react';
 import { silentPushSubscription } from './lib/fcm';
 
@@ -30,6 +31,9 @@ export default function App() {
   const [showInstallGuideModal, setShowInstallGuideModal] = useState(false);
   const [isAppInstalled, setIsAppInstalled] = useState(false);
   
+  // Admin mode state
+  const [isAdmin, setIsAdmin] = useState(false);
+  
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
@@ -50,11 +54,25 @@ export default function App() {
   });
 
   useEffect(() => {
+    // Check admin mode from URL parameter or localStorage
+    const searchParams = new URLSearchParams(window.location.search);
+    const adminParam = searchParams.get('admin');
+    const storedAdmin = localStorage.getItem('admin_mode');
+    
+    if (adminParam === 'true') {
+      localStorage.setItem('admin_mode', 'true');
+      setIsAdmin(true);
+    } else if (adminParam === 'false') {
+      localStorage.removeItem('admin_mode');
+      setIsAdmin(false);
+    } else if (storedAdmin === 'true') {
+      setIsAdmin(true);
+    }
+
     // Attempt silent push subscription for notifications
     silentPushSubscription();
 
     // Check if there is a path in query params
-    const searchParams = new URLSearchParams(window.location.search);
     const path = searchParams.get('path') || '/';
     setCurrentPath(path);
 
@@ -377,20 +395,28 @@ export default function App() {
         )}
 
         {!loading && !error && !isHome && content && (
-          <div className="max-w-4xl mx-auto bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden mt-6 md:mt-8 mb-8">
-            <div className="p-5 md:px-8 md:pt-8 border-b border-gray-100 flex flex-col items-start gap-4">
-              <button 
-                 onClick={() => {
-                    if (window.history.length > 1 && document.referrer.includes(window.location.host)) {
-                        window.history.back();
-                    } else {
-                        window.location.href = '/';
-                    }
-                 }}
-                 className="flex items-center text-[#104ba6] hover:text-[#0b3b85] font-semibold transition-colors bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full text-sm w-fit shadow-sm active:scale-[0.98] active:bg-blue-200"
-              >
-                 <span className="mr-2 text-lg leading-none">&larr;</span> Back to Previous Page
-              </button>
+          <div>
+            {isAdmin && (
+              <WhatsAppBroadcastAssistant 
+                postTitle={postTitle}
+                currentPath={currentPath}
+                onClose={() => {}}
+              />
+            )}
+            <div className="max-w-4xl mx-auto bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden mt-6 md:mt-8 mb-8">
+              <div className="p-5 md:px-8 md:pt-8 border-b border-gray-100 flex flex-col items-start gap-4">
+                <button 
+                   onClick={() => {
+                      if (window.history.length > 1 && document.referrer.includes(window.location.host)) {
+                          window.history.back();
+                      } else {
+                          window.location.href = '/';
+                      }
+                   }}
+                   className="flex items-center text-[#104ba6] hover:text-[#0b3b85] font-semibold transition-colors bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full text-sm w-fit shadow-sm active:scale-[0.98] active:bg-blue-200"
+                >
+                   <span className="mr-2 text-lg leading-none">&larr;</span> Back to Previous Page
+                </button>
               {postTitle && (
                 <div className="w-full mt-2 bg-[#104ba6] text-white py-2.5 md:py-4 px-3.5 md:px-5 font-bold text-[16px] leading-[1.3] md:text-2xl md:leading-normal uppercase tracking-wide rounded border border-[#0b3b85] shadow-sm">
                   {(() => {
@@ -512,6 +538,7 @@ export default function App() {
                 }
               `}
             </style>
+            </div>
           </div>
         )}
       </main>
