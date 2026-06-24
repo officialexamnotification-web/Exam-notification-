@@ -22,16 +22,22 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
   const generateWhatsAppMessage = () => {
     const link = getFullLink();
     
-    return `🚨 NEW EXAM / JOB UPDATE 🚨
-📢 ${organization}
+    return `*🚨 NEW EXAM / JOB UPDATE 🚨*
+
+📢 *${organization}*
+
 📌 Post Name: ${postName}
 🎓 Eligibility: ${eligibility}
-� Last Date: ${lastDate}
-� Apply Online & Full Details here:
+📅 Last Date: ${lastDate}
+
+🔗 Apply Online & Full Details here:
 👉 ${link}
+
 ━━━━━━━━━━━━━━━━━━━
+
 📢 Join our WhatsApp Channel for instant job alerts:
 👉 https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d
+
 👉 Please Share this with your friends! 🙏`;
   };
 
