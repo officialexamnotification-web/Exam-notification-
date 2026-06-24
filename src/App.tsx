@@ -66,7 +66,7 @@ export default function App() {
     if (postTitle && !isHome) {
       document.title = `${postTitle} - Exam Notification`;
       
-      // Update Open Graph meta tags dynamically
+      // Update Open Graph meta tags dynamically (no image to avoid large preview)
       const ogTitle = document.querySelector('meta[property="og:title"]');
       const ogDescription = document.querySelector('meta[property="og:description"]');
       const ogUrl = document.querySelector('meta[property="og:url"]');
