@@ -8,39 +8,112 @@ interface WhatsAppBroadcastAssistantProps {
 }
 
 export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onClose }: WhatsAppBroadcastAssistantProps) {
-  const [organization, setOrganization] = useState('UPSC');
+  const [category, setCategory] = useState('Latest Jobs');
   const [postName, setPostName] = useState(postTitle || 'Exam Notification');
-  const [eligibility, setEligibility] = useState('Graduate');
-  const [lastDate, setLastDate] = useState('15/07/2026');
-  const [whatsappChannel, setWhatsappChannel] = useState('https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d');
+  const [lastDate, setLastDate] = useState('');
   const [copied, setCopied] = useState(false);
 
   const getFullLink = () => {
     const baseUrl = window.location.origin;
-    // Use clean URLs instead of ?path= parameter
+    // Use clean URLs
     return `${baseUrl}${currentPath}`;
   };
 
   const generateWhatsAppMessage = () => {
     const link = getFullLink();
     
-    return `*🚨 NEW EXAM / JOB UPDATE 🚨*
+    // Category-based templates
+    const templates: { [key: string]: string } = {
+      'Latest Jobs': `🚨 *NEW JOB ALERT* 🚨
 
-📢 *${organization}*
+📌 *Post Name:* ${postName}
 
-📌 Post Name: ${postName}
-🎓 Eligibility: ${eligibility}
-📅 Last Date: ${lastDate}
+📅 *Last Date:* ${lastDate || 'Check Official Website'}
 
-🔗 Apply Online & Full Details here:
+🔗 *Apply Online & Full Details:*
 👉 ${link}
 
 ━━━━━━━━━━━━━━━━━━━
 
-📢 Join our WhatsApp Channel for instant job alerts:
-� ${whatsappChannel}
+🌐 *Exam Notification*
+👉 https://govexamnotification.online
 
-👉 Please Share this with your friends! 🙏`;
+👉 *Please Share this with your friends!* 🙏`,
+      
+      'Results': `🏆 *RESULT OUT* 🏆
+
+📌 *Post Name:* ${postName}
+
+🔗 *Check Result:*
+👉 ${link}
+
+━━━━━━━━━━━━━━━━━━━
+
+🌐 *Exam Notification*
+👉 https://govexamnotification.online
+
+👉 *Please Share this with your friends!* 🙏`,
+      
+      'Admit Cards': `🎫 *ADMIT CARD OUT* 🎫
+
+📌 *Post Name:* ${postName}
+
+🔗 *Download Admit Card:*
+👉 ${link}
+
+━━━━━━━━━━━━━━━━━━━
+
+🌐 *Exam Notification*
+👉 https://govexamnotification.online
+
+👉 *Please Share this with your friends!* 🙏`,
+      
+      'Answer Key': `📝 *ANSWER KEY OUT* 📝
+
+📌 *Post Name:* ${postName}
+
+🔗 *Check Answer Key:*
+👉 ${link}
+
+━━━━━━━━━━━━━━━━━━━
+
+🌐 *Exam Notification*
+👉 https://govexamnotification.online
+
+👉 *Please Share this with your friends!* 🙏`,
+      
+      'Documents': `📚 *IMPORTANT DOCUMENT UPDATE* 📚
+
+📌 *Post Name:* ${postName}
+
+🔗 *View Full Details:*
+👉 ${link}
+
+━━━━━━━━━━━━━━━━━━━
+
+🌐 *Exam Notification*
+👉 https://govexamnotification.online
+
+👉 *Please Share this with your friends!* 🙏`,
+      
+      'Admission': `🎓 *ADMISSION UPDATE* 🎓
+
+📌 *Post Name:* ${postName}
+
+📅 *Last Date:* ${lastDate || 'Check Official Website'}
+
+🔗 *Apply Online & Full Details:*
+👉 ${link}
+
+━━━━━━━━━━━━━━━━━━━
+
+🌐 *Exam Notification*
+👉 https://govexamnotification.online
+
+👉 *Please Share this with your friends!* 🙏`
+    };
+
+    return templates[category] || templates['Latest Jobs'];
   };
 
   const handleCopy = async () => {
@@ -94,15 +167,20 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
       <div className="space-y-3">
         <div>
           <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
-            Organization Name (संस्था का नाम)
+            Category (श्रेणी)
           </label>
-          <input
-            type="text"
-            value={organization}
-            onChange={(e) => setOrganization(e.target.value)}
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
             className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
-            placeholder="e.g., UPSC, SSC, Railway"
-          />
+          >
+            <option value="Latest Jobs">Latest Jobs</option>
+            <option value="Results">Results</option>
+            <option value="Admit Cards">Admit Cards</option>
+            <option value="Answer Key">Answer Key</option>
+            <option value="Documents">Documents</option>
+            <option value="Admission">Admission</option>
+          </select>
         </div>
         <div>
           <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
@@ -118,38 +196,14 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
         </div>
         <div>
           <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
-            Eligibility (योग्यता)
-          </label>
-          <input
-            type="text"
-            value={eligibility}
-            onChange={(e) => setEligibility(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
-            placeholder="e.g., Graduate, 12th, 10th"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
-            Last Date (अंतिम तिथि)
+            Last Date (अंतिम तिथि) - Optional
           </label>
           <input
             type="text"
             value={lastDate}
             onChange={(e) => setLastDate(e.target.value)}
             className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
-            placeholder="e.g., 15/07/2026"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-semibold mb-1.5 text-white/90 uppercase tracking-wide">
-            WhatsApp Channel Link
-          </label>
-          <input
-            type="text"
-            value={whatsappChannel}
-            onChange={(e) => setWhatsappChannel(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg text-gray-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
-            placeholder="https://whatsapp.com/channel/..."
+            placeholder="e.g., 15/07/2026 (leave blank if not applicable)"
           />
         </div>
 
