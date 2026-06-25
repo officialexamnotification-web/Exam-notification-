@@ -16,10 +16,10 @@ export default function Header({ isMobileMenuOpen, setIsMobileMenuOpen, onInstal
             {/* Logo area */}
              <a href="/" className="flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity">
               <span className="text-3xl md:text-[34px] font-black text-white tracking-tighter uppercase font-sans drop-shadow-sm">
-                Exam
+                GOVEXAM
               </span>
               <span className="bg-[#eb1414] text-white text-[18px] md:text-[22px] font-black px-2.5 py-[3px] rounded tracking-wide uppercase mt-1 shadow-sm">
-                Notification
+                NOTIFICATION
               </span>
             </a>
             

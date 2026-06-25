@@ -619,10 +619,10 @@ export default function App() {
             <div>
                <a href="/" className="mb-4 inline-flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity">
                   <span className="text-2xl font-black text-[#eb1414] tracking-tighter uppercase font-sans">
-                    Exam
+                    GOVEXAM
                   </span>
                   <span className="bg-[#eb1414] text-white text-md font-black px-1.5 py-[2px] rounded tracking-wide uppercase mt-1">
-                    Notification
+                    NOTIFICATION
                   </span>
                 </a>
                <p className="text-gray-400 leading-relaxed text-sm">
@@ -639,7 +639,7 @@ export default function App() {
                   <li><a href="/" className="hover:text-white hover:pl-1 transition-all">Home</a></li>
                   <li><a href="/" className="hover:text-white hover:pl-1 transition-all">Latest Jobs</a></li>
                   <li><a href="/" className="hover:text-white hover:pl-1 transition-all">Results</a></li>
-                  <li><a href="mailto:official.sarkarinaukarijob@gmail.com" className="hover:text-white hover:pl-1 transition-all">Contact Us</a></li>
+                  <li><a href="mailto:official.examnotification@gmail.com" className="hover:text-white hover:pl-1 transition-all">Contact Us</a></li>
                </ul>
             </div>
             <div>
@@ -652,8 +652,8 @@ export default function App() {
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-gray-800 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex flex-col items-start text-left gap-1">
-            <p>&copy; 2008 Exam Notification. All rights reserved.</p>
-            <p className="text-xs">Contact: official.sarkarinaukarijob@gmail.com</p>
+            <p>&copy; 2008 GOVEXAM NOTIFICATION. All rights reserved.</p>
+            <p className="text-xs">Contact: official.examnotification@gmail.com</p>
           </div>
           <div className="flex items-center gap-4 text-xs font-medium uppercase tracking-wider">
              <button onClick={() => setActiveModal('disclaimer')} className="hover:text-gray-300 transition-colors">Disclaimer</button>
