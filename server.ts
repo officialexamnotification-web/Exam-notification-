@@ -371,13 +371,8 @@ async function startServer() {
                           $table.replaceWith(ctaHtml);
                       }
                       replacedAny = true;
-                  } else {
-                      if (parent.length > 0) {
-                          parent.remove();
-                      } else {
-                          $table.remove();
-                      }
                   }
+                  // Don't remove other tables - they might contain legitimate links
               }
           });
 
