@@ -247,7 +247,7 @@ export default function App() {
           }
           if (data.title) {
             const cleanTitle = data.title.replace(/(Official\s+Sarkari\s+Result\s+Website|Sarkari\s*Result|Sarkari\s*Naukri|\.com|\.cm|\|)/gi, '').trim();
-            document.title = `${cleanTitle} - GOVEXAM NOTIFICATION`;
+            document.title = `GOVEXAM NOTIFICATION - ${cleanTitle}`;
           }
         } else {
           setError(data.error);
