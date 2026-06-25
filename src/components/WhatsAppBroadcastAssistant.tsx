@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, Copy, Check, Share2, Sparkles, LogOut } from 'lucide-react';
+import { MessageCircle, Copy, Check, Share2, Sparkles, LogOut, RefreshCw } from 'lucide-react';
 
 interface WhatsAppBroadcastAssistantProps {
   postTitle: string | null;
@@ -12,6 +12,8 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
   const [postName, setPostName] = useState(postTitle || 'Exam Notification');
   const [lastDate, setLastDate] = useState('');
   const [copied, setCopied] = useState(false);
+  const [isRescraping, setIsRescraping] = useState(false);
+  const [rescrapeMessage, setRescrapeMessage] = useState('');
 
   const getFullLink = () => {
     const baseUrl = window.location.origin;
@@ -137,6 +139,39 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
     window.location.href = '/?admin_key=logout';
   };
 
+  const handleRescrape = async () => {
+    setIsRescraping(true);
+    setRescrapeMessage('');
+    
+    try {
+      const response = await fetch('/api/admin/rescrape', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          admin_key: 'exam_notification_admin_secret_2024_secure_key',
+          path: currentPath
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setRescrapeMessage('✅ Post re-scraped successfully! Refreshing...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        setRescrapeMessage('❌ Re-scrape failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      setRescrapeMessage('❌ Re-scrape failed: Network error');
+    } finally {
+      setIsRescraping(false);
+    }
+  };
+
   return (
     <div className="bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white p-4 md:p-5 rounded-xl shadow-lg mb-6 border border-green-400/30">
       <div className="flex items-center justify-between mb-4">
@@ -216,6 +251,30 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
             {generateWhatsAppMessage()}
           </pre>
         </div>
+
+        <button
+          onClick={handleRescrape}
+          disabled={isRescraping}
+          className="w-full flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold py-2.5 px-4 rounded-lg transition-all active:scale-[0.98] border border-white/30 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isRescraping ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Re-scraping...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4" />
+              Re-scrape This Post
+            </>
+          )}
+        </button>
+
+        {rescrapeMessage && (
+          <div className="text-center text-xs font-semibold bg-white/20 rounded-lg p-2">
+            {rescrapeMessage}
+          </div>
+        )}
 
         <div className="flex gap-2">
           <button

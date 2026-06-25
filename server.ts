@@ -891,6 +891,41 @@ for (const [key, value] of serverCache.entries()) {
     }
   });
 
+  // Admin-only manual re-scrape endpoint
+  app.post("/api/admin/rescrape", async (req, res): Promise<any> => {
+    try {
+      const { admin_key, path } = req.body;
+      
+      // Verify admin key
+      const SECRET_ADMIN_KEY = 'exam_notification_admin_secret_2024_secure_key';
+      if (admin_key !== SECRET_ADMIN_KEY) {
+        return res.status(403).json({ success: false, error: "Unauthorized" });
+      }
+      
+      if (!path) {
+        return res.status(400).json({ success: false, error: "Path is required" });
+      }
+      
+      let targetPath = path;
+      if (!targetPath.startsWith('/')) {
+        targetPath = '/' + targetPath;
+      }
+      
+      console.log(`[ADMIN RESCRAPE] Re-scraping post: ${targetPath}`);
+      
+      const { scrapeJobPost } = await import("./src/lib/scheduler");
+      await scrapeJobPost(db, targetPath, true);
+      
+      return res.json({ 
+        success: true, 
+        message: `Successfully re-scraped: ${targetPath}` 
+      });
+    } catch (error: any) {
+      console.error("[ADMIN RESCRAPE ERROR]:", error.message);
+      res.status(500).json({ success: false, error: "Re-scrape failed" });
+    }
+  });
+
   // 301 redirect for old ?path= URLs to clean URLs
   app.use((req, res, next) => {
     if (req.query.path && typeof req.query.path === 'string') {
