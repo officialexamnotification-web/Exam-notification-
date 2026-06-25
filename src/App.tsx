@@ -75,11 +75,11 @@ export default function App() {
       const twitterDescription = document.querySelector('meta[name="twitter:description"]');
       const twitterImage = document.querySelector('meta[name="twitter:image"]');
       
-      if (ogTitle) ogTitle.setAttribute('content', `${postTitle} - GOVEXAM NOTIFICATION`);
+      if (ogTitle) ogTitle.setAttribute('content', `GOVEXAM NOTIFICATION - ${postTitle}`);
       if (ogDescription) ogDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
       if (ogUrl) ogUrl.setAttribute('content', `${window.location.origin}${currentPath}`);
       if (ogImage) ogImage.setAttribute('content', `${window.location.origin}/icon.svg`);
-      if (twitterTitle) twitterTitle.setAttribute('content', `${postTitle} - GOVEXAM NOTIFICATION`);
+      if (twitterTitle) twitterTitle.setAttribute('content', `GOVEXAM NOTIFICATION - ${postTitle}`);
       if (twitterDescription) twitterDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
       if (twitterImage) twitterImage.setAttribute('content', `${window.location.origin}/icon.svg`);
     } else {
