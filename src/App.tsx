@@ -75,15 +75,15 @@ export default function App() {
       const twitterDescription = document.querySelector('meta[name="twitter:description"]');
       const twitterImage = document.querySelector('meta[name="twitter:image"]');
       
-      if (ogTitle) ogTitle.setAttribute('content', `${postTitle} - Exam Notification`);
+      if (ogTitle) ogTitle.setAttribute('content', `${postTitle} - GOVEXAM NOTIFICATION`);
       if (ogDescription) ogDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
       if (ogUrl) ogUrl.setAttribute('content', `${window.location.origin}${currentPath}`);
       if (ogImage) ogImage.setAttribute('content', `${window.location.origin}/icon.svg`);
-      if (twitterTitle) twitterTitle.setAttribute('content', `${postTitle} - Exam Notification`);
+      if (twitterTitle) twitterTitle.setAttribute('content', `${postTitle} - GOVEXAM NOTIFICATION`);
       if (twitterDescription) twitterDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
       if (twitterImage) twitterImage.setAttribute('content', `${window.location.origin}/icon.svg`);
     } else {
-      document.title = 'Exam Notification - Latest Jobs & Results';
+      document.title = 'GOVEXAM NOTIFICATION - Latest Jobs, Admit Cards, Results';
       
       // Reset meta tags for home page
       const ogTitle = document.querySelector('meta[property="og:title"]');
@@ -94,11 +94,11 @@ export default function App() {
       const twitterDescription = document.querySelector('meta[name="twitter:description"]');
       const twitterImage = document.querySelector('meta[name="twitter:image"]');
       
-      if (ogTitle) ogTitle.setAttribute('content', 'Exam Notification - Latest Jobs & Results');
+      if (ogTitle) ogTitle.setAttribute('content', 'GOVEXAM NOTIFICATION - Latest Jobs, Admit Cards, Results');
       if (ogDescription) ogDescription.setAttribute('content', 'Get latest government job notifications, results, admit cards, and exam updates in India.');
       if (ogUrl) ogUrl.setAttribute('content', window.location.origin);
       if (ogImage) ogImage.setAttribute('content', `${window.location.origin}/icon.svg`);
-      if (twitterTitle) twitterTitle.setAttribute('content', 'Exam Notification - Latest Jobs & Results');
+      if (twitterTitle) twitterTitle.setAttribute('content', 'GOVEXAM NOTIFICATION - Latest Jobs, Admit Cards, Results');
       if (twitterDescription) twitterDescription.setAttribute('content', 'Get latest government job notifications, results, admit cards, and exam updates in India.');
       if (twitterImage) twitterImage.setAttribute('content', `${window.location.origin}/icon.svg`);
     }
