@@ -6,9 +6,10 @@ const targetUrlBase = "https://sarkariresult.com.cm";
 
 const cleanText = (text: string) => {
   if (!text) return text;
-  return text.replace(/sarkari\s*result(?:s)?(?:\.com\.cm|\.com|\.info|\.net|\.org)?/ig, 'Sarkari Naukri')
-             .replace(/sarkariresult/ig, 'SarkariNaukri')
-             .replace(/sarkarinaukri\.com\.cm/ig, 'Sarkari Naukri');
+  return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official Exam Notification Website')
+             .replace(/sarkari\s*result(?:s)?(?:\.com\.cm|\.com|\.info|\.net|\.org)?/ig, 'Official Exam Notification Website')
+             .replace(/sarkariresult/ig, 'Official Exam Notification Website')
+             .replace(/sarkarinaukri\.com\.cm/ig, 'Official Exam Notification Website');
 };
 
 const replaceHowToWithYouTubeCTA = (contentHtml: string, pageTitle: string): string => {
