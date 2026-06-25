@@ -875,6 +875,13 @@ for (const [key, value] of serverCache.entries()) {
           let cleanContent = data.content;
           if (cleanContent) {
               cleanContent = replaceHowToWithYouTubeCTA(cleanContent, data.title || '');
+              // Apply cleanText to entire HTML as final safety net
+              const cleanText = (text: string) => {
+                if (!text) return text;
+                return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official Exam Notification Website')
+                           .replace(/sarkari\s*result/ig, 'Official Exam Notification Website');
+              };
+              cleanContent = cleanText(cleanContent);
           }
           
           return res.json({

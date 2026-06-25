@@ -625,6 +625,8 @@ export async function scrapeJobPost(db: any, path: string, isNew: boolean = true
     let finalHtmlResult = $finalContent.html();
     if (finalHtmlResult) {
         finalHtmlResult = replaceHowToWithYouTubeCTA(finalHtmlResult, title);
+        // Apply cleanText to entire HTML as final safety net
+        finalHtmlResult = cleanText(finalHtmlResult);
     }
     if (!finalHtmlResult || finalHtmlResult.trim() === '') {
         console.warn(`[ERROR] Parsed empty content or layout changed at ${targetUrl}. Not overwriting data.`);
