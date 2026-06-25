@@ -6,7 +6,8 @@ const targetUrlBase = "https://sarkariresult.com.cm";
 
 const cleanText = (text: string) => {
   if (!text) return text;
-  return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official Exam Notification Website');
+  return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official Exam Notification Website')
+             .replace(/sarkari\s*result/ig, 'Official Exam Notification Website');
 };
 
 const replaceHowToWithYouTubeCTA = (contentHtml: string, pageTitle: string): string => {

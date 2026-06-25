@@ -490,7 +490,7 @@ export default function App() {
               {postTitle && (
                 <div className="w-full mt-2 bg-[#104ba6] text-white py-2.5 md:py-4 px-3.5 md:px-5 font-bold text-[16px] leading-[1.3] md:text-2xl md:leading-normal uppercase tracking-wide rounded border border-[#0b3b85] shadow-sm">
                   {(() => {
-                     const cleaned = postTitle.replace(/(Official\s+Sarkari\s+Result\s+Website|\.com|\.cm|\|)/gi, '').trim();
+                     const cleaned = postTitle.replace(/(Official\s+Sarkari\s+Result\s+Website|Sarkari\s*Result|\.com|\.cm|\|)/gi, '').trim();
                      if (cleaned.length < 3) return postTitle;
                      if (cleaned.startsWith('-')) return cleaned.substring(1).trim();
                      return cleaned;
