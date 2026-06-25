@@ -278,7 +278,7 @@ async function startServer() {
           let replacedAny = false;
 
           const cleanPageTitle = pageTitle
-              .replace(/(Official\s+Sarkari\s+Result\s+Website|Sarkari\s*Result|SarkariResult|\.com|\.cm|\|)/gi, 'Official Exam Notification Website')
+              .replace(/(Official\s+Sarkari\s+Result\s+Website|\.com|\.cm|\|)/gi, 'Official Exam Notification Website')
               .replace(/\s+/g, ' ')
               .trim();
 
