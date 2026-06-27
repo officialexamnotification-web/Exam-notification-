@@ -35,7 +35,7 @@ export default function Header({ isMobileMenuOpen, setIsMobileMenuOpen, onInstal
               </button>
 
               <div className="md:hidden flex items-center">
-                 <button className="p-1" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                 <button className="p-1" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Toggle Menu">
                    {isMobileMenuOpen ? <X className="w-7 h-7 text-white" /> : <Menu className="w-7 h-7 text-white" />}
                  </button>
               </div>
