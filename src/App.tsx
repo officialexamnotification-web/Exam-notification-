@@ -676,7 +676,7 @@ export default function App() {
                </p>
                <br />
                <p className="text-xs text-gray-500 leading-relaxed border-l-2 border-gray-700 pl-3">
-                 <strong>Disclaimer:</strong> This is an information aggregation portal and not an official government website. We provide links and information by collecting data from various public notification sources. We do not offer jobs directly and are not responsible for any inaccuracies. Users are advised to verify details from the respective official websites before applying.
+                 <strong>Disclaimer:</strong> GOVEXAM NOTIFICATION is an independent educational news portal and job aggregator. We are <strong>NOT</strong> associated with any government organization, board, or commission. We only assemble and provide publicly available information from official sources to help job seekers find updates easily. Always verify details on the official websites.
                </p>
             </div>
             <div>
@@ -695,13 +695,6 @@ export default function App() {
                   <li><a href="#" className="hover:text-sky-400 transition-colors flex items-center gap-3"><Send className="w-5 h-5 text-sky-400" /> Telegram Group</a></li>
                </ul>
             </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-gray-800 text-sm text-gray-500 flex flex-col gap-6">
-          <div className="w-full text-justify md:text-center">
-            <p className="text-[11px] md:text-xs text-gray-400 leading-relaxed">
-              <strong className="text-gray-300 uppercase tracking-wider">Disclaimer:</strong> GOVEXAM NOTIFICATION is an independent educational news portal and job aggregator. We are <strong>NOT</strong> associated with any government organization, board, or commission. We only assemble and provide publicly available information from official sources to help job seekers find updates easily. Always verify details on the official websites.
-            </p>
-          </div>
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-center">
               <p>&copy; 2008 GOVEXAM NOTIFICATION. All rights reserved.</p>
