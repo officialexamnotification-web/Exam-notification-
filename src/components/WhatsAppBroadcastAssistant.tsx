@@ -14,6 +14,8 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
   const [copied, setCopied] = useState(false);
   const [isRescraping, setIsRescraping] = useState(false);
   const [rescrapeMessage, setRescrapeMessage] = useState('');
+  const [isBulkScraping, setIsBulkScraping] = useState(false);
+  const [bulkScrapeMessage, setBulkScrapeMessage] = useState('');
 
   const getFullLink = () => {
     const baseUrl = window.location.origin;
@@ -172,6 +174,35 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
     }
   };
 
+  const handleBulkRescrape = async () => {
+    setIsBulkScraping(true);
+    setBulkScrapeMessage('');
+    
+    try {
+      const response = await fetch('/api/admin/bulk-rescrape', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          admin_key: 'exam_notification_admin_secret_2024_secure_key'
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setBulkScrapeMessage('✅ Bulk Scrape Started! It will run in background.');
+      } else {
+        setBulkScrapeMessage('❌ Failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      setBulkScrapeMessage('❌ Failed: Network error');
+    } finally {
+      setIsBulkScraping(false);
+    }
+  };
+
   return (
     <div className="bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white p-4 md:p-5 rounded-xl shadow-lg mb-6 border border-green-400/30">
       <div className="flex items-center justify-between mb-4">
@@ -273,6 +304,30 @@ export default function WhatsAppBroadcastAssistant({ postTitle, currentPath, onC
         {rescrapeMessage && (
           <div className="text-center text-xs font-semibold bg-white/20 rounded-lg p-2">
             {rescrapeMessage}
+          </div>
+        )}
+
+        <button
+          onClick={handleBulkRescrape}
+          disabled={isBulkScraping}
+          className="w-full flex items-center justify-center gap-2 bg-[#128C7E]/80 hover:bg-[#128C7E] text-white font-bold py-2.5 px-4 rounded-lg transition-all active:scale-[0.98] border border-white/30 text-sm md:text-base disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+        >
+          {isBulkScraping ? (
+            <>
+              <RefreshCw className="w-4 h-4 animate-spin" />
+              Starting Bulk Scrape...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="w-4 h-4" />
+              Scrape All Jobs (Bulk Scrape)
+            </>
+          )}
+        </button>
+
+        {bulkScrapeMessage && (
+          <div className="text-center text-xs font-semibold bg-white/20 rounded-lg p-2">
+            {bulkScrapeMessage}
           </div>
         )}
 

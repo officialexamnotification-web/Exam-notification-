@@ -1091,6 +1091,38 @@ for (const [key, value] of serverCache.entries()) {
     }
   });
 
+  // Admin-only bulk re-scrape endpoint (Scrape Homepage + All Latest Jobs)
+  app.post("/api/admin/bulk-rescrape", async (req, res): Promise<any> => {
+    try {
+      const { admin_key } = req.body;
+      
+      // Verify admin key
+      const SECRET_ADMIN_KEY = 'exam_notification_admin_secret_2024_secure_key';
+      if (admin_key !== SECRET_ADMIN_KEY) {
+        return res.status(403).json({ success: false, error: "Unauthorized" });
+      }
+      
+      console.log(`[ADMIN BULK RESCRAPE] Initiating bulk scrape for homepage and all jobs...`);
+      
+      // Run the scraper asynchronously so we don't block the response for too long
+      // Or we can await it if we want to show completion, but it might timeout.
+      // Usually runScraper takes some time. We will await it for simplicity, 
+      // but maybe it's better to run it in background and return immediately?
+      // Since it's an admin tool, we'll run it in background and return "started".
+      
+      const { runScraper } = await import("./src/lib/scheduler");
+      runScraper(db).catch(err => console.error("Bulk scrape failed:", err));
+      
+      return res.json({ 
+        success: true, 
+        message: "Bulk scraping started in the background. Check logs or refresh homepage in a few minutes." 
+      });
+    } catch (error: any) {
+      console.error("[ADMIN BULK RESCRAPE ERROR]:", error.message);
+      res.status(500).json({ success: false, error: "Bulk re-scrape failed to start" });
+    }
+  });
+
   // 301 redirect for old ?path= URLs to clean URLs
   app.use((req, res, next) => {
     if (req.query.path && typeof req.query.path === 'string') {
