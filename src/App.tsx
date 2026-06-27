@@ -151,7 +151,26 @@ export default function App() {
       setError(null);
       try {
         const response = await fetch(`/api/scrape?path=${encodeURIComponent(path)}`);
-        const data = await response.json();
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('API Error:', response.status, errorText);
+          setError(`Server error: ${response.status}. Please try again.`);
+          setLoading(false);
+          return;
+        }
+        
+        let data;
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          console.error('JSON Parse Error:', jsonError);
+          const errorText = await response.text();
+          console.error('Response text:', errorText);
+          setError('Invalid response from server. Please try again.');
+          setLoading(false);
+          return;
+        }
         
        if (data.success) {
           if (data.isHome) {

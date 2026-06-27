@@ -571,10 +571,47 @@ async function startServer() {
                           trending: []
                       });
                   }
-              }
 
-              // Fallback if not found in db or not matching explicitly
-              return res.status(404).json({ success: false, error: 'Category data not found or still syncing. Please check back later.' });
+                  // Fallback if not found in db or not matching explicitly
+                  // Try on-demand scraping for category pages
+                  console.log(`[ON-DEMAND SCRAPE] Category ${categoryId} not found in DB. Scraping on-the-fly...`);
+                  try {
+                      const { runScraper } = await import("./src/lib/scheduler");
+                      await runScraper(db);
+                      
+                      // Re-fetch from db after scraping
+                      const catDocRef = doc(db, 'category_pages', categoryId);
+                      const catDoc = await getDoc(catDocRef);
+                      if (catDoc.exists()) {
+                          data = catDoc.data();
+                          cache.set(`category_pages_${categoryId}`, { data, timestamp: Date.now() });
+                          saveCache();
+                      }
+                  } catch (scrapeErr: any) {
+                      console.error('[ON-DEMAND SCRAPE ERROR]:', scrapeErr.message);
+                  }
+                  
+                  if (data) {
+                      return res.json({
+                          success: true,
+                          isHome: true,
+                          title: data.title,
+                          data: [
+                              {
+                                  id: 'category-results',
+                                  title: data.title,
+                                  links: maskSequence(data.links || []),
+                                  viewAllUrl: '#'
+                              }
+                          ],
+                          trending: []
+                      });
+                  }
+                  
+                  return res.status(404).json({ success: false, error: 'Category data not found or still syncing. Please check back later.' });
+              }
+              
+              return res.status(404).json({ success: false, error: 'Category not found' });
           } catch (error) {
               console.error("Category fetch error:", error);
               return res.status(500).json({ success: false, error: 'Failed to load category data' });
