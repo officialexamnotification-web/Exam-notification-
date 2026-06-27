@@ -158,7 +158,17 @@ export default function App() {
 
         if (!response.ok) {
           console.error('API Error:', response.status, responseText);
-          // Try to extract a friendly error message from the response
+          // For non-home pages (post pages), redirect back instead of showing error
+          if (path !== '/' && path !== '') {
+            console.log('Non-home page error, navigating back...');
+            if (window.history.length > 1 && document.referrer.includes(window.location.host)) {
+              window.history.back();
+            } else {
+              window.location.href = '/';
+            }
+            return;
+          }
+          // For home page, show error message
           try {
             const errData = JSON.parse(responseText);
             setError(errData.error || `Server error: ${response.status}. Please try again.`);

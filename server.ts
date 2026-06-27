@@ -945,9 +945,34 @@ for (const [key, value] of serverCache.entries()) {
           }
           
           if (!data) {
-              return res.status(404).json({
-                success: false,
-                error: "Job detail not found or currently syncing."
+              // Instead of error, return a helpful fallback content page
+              const pathWords = targetPath.replace(/^\/|\/$/g, '').split(/[-_\/]/).filter(w => w.length > 0);
+              const fallbackTitle = pathWords.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'Page Not Available';
+              
+              return res.json({
+                success: true,
+                isHome: false,
+                title: fallbackTitle,
+                content: `
+                  <div style="padding: 24px 16px;">
+                    <div style="background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 100%); border: 1px solid #c7d2fe; border-radius: 16px; padding: 40px 24px; text-align: center; max-width: 550px; margin: 0 auto;">
+                      <div style="width: 64px; height: 64px; background: #104ba6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                      </div>
+                      <h2 style="color: #1e3a5f; font-size: 20px; font-weight: 800; margin-bottom: 12px; line-height: 1.3;">यह Page अभी Update हो रहा है</h2>
+                      <p style="color: #475569; font-size: 14px; line-height: 1.7; margin-bottom: 8px;">
+                        This page content is currently being synced. कृपया कुछ समय बाद दोबारा try करें।
+                      </p>
+                      <p style="color: #64748b; font-size: 13px; line-height: 1.6; margin-bottom: 28px;">
+                        आप Homepage पर जाकर Latest Jobs, Syllabus, Admit Card और Results देख सकते हैं।
+                      </p>
+                      <div style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
+                        <a href="javascript:void(0)" onclick="if(window.history.length > 1){window.history.back()}else{window.location.href='/'}" style="display: inline-block; background: #104ba6; color: white; padding: 12px 36px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; box-shadow: 0 2px 8px rgba(16,75,166,0.3); transition: background 0.2s;">← पिछले Page पर जाएं</a>
+                        <a href="/" style="display: inline-block; background: white; color: #104ba6; padding: 10px 32px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 13px; border: 2px solid #104ba6;">🏠 Homepage पर जाएं</a>
+                      </div>
+                    </div>
+                  </div>
+                `
               });
           }
           
