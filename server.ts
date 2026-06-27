@@ -125,6 +125,76 @@ async function startServer() {
     res.json({ size: serverCache.size, keys });
   });
 
+  // Dynamic Sitemap Generator
+  app.get("/sitemap.xml", (req, res) => {
+    try {
+      res.header("Content-Type", "application/xml");
+      
+      const baseUrl = "https://govexamnotification.online";
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <changefreq>hourly</changefreq>
+    <priority>1.0</priority>
+  </url>`;
+
+      const paths = new Set<string>();
+      
+      // Extract links from home page cache (trending and category lists)
+      const homeData = serverCache.get('home_data_index');
+      if (homeData) {
+        if (Array.isArray(homeData.trendingLinks)) {
+          homeData.trendingLinks.forEach((link: any) => {
+            if (link && link.path) paths.add(link.path);
+          });
+        }
+        if (Array.isArray(homeData.categories)) {
+          homeData.categories.forEach((cat: any) => {
+            if (Array.isArray(cat.links)) {
+              cat.links.forEach((link: any) => {
+                if (link && link.path) paths.add(link.path);
+              });
+            }
+          });
+        }
+      }
+
+      // Extract links from individual job caches
+      for (const [key, item] of serverCache.entries()) {
+        if (key.startsWith('jobs_')) {
+          if (item && item.path) paths.add(item.path);
+          else if (item && item.data && item.data.path) paths.add(item.data.path);
+        }
+      }
+
+      // Append extracted paths to XML
+      paths.forEach(path => {
+        const formattedPath = path.startsWith('/') ? path : `/${path}`;
+        const queryStr = `?path=${encodeURIComponent(formattedPath)}`;
+        const encodedUrl = `${baseUrl}/${queryStr}`
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+        
+        xml += `
+  <url>
+    <loc>${encodedUrl}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+      });
+
+      xml += `\n</urlset>`;
+      res.send(xml);
+    } catch (error) {
+      console.error("Sitemap generation error:", error);
+      res.status(500).send("Error generating sitemap");
+    }
+  });
+
   // Helper to scramble sequences stable and deterministically within chunks
   const maskSequence = (links: any[]): any[] => {
       if (!links || !Array.isArray(links) || links.length <= 1) return links || [];
