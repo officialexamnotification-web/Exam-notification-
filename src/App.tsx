@@ -660,33 +660,21 @@ export default function App() {
         )}
       </main>
 
-      <footer className="bg-[#1f2937] text-white mt-auto">
-  <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-
-    {/* Top Section */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-
-      {/* Logo & About */}
-      <div>
-        <a
-          href="/"
-          className="inline-flex items-center gap-1.5 hover:opacity-90 transition-opacity"
-        >
-          <span className="text-2xl font-black text-[#eb1414] tracking-tight">
-            GOVEXAM
-          </span>
-
-          <span className="bg-[#eb1414] text-white text-sm font-black px-2 py-1 rounded">
-            NOTIFICATION
-          </span>
-        </a>
-
-        <p className="mt-5 text-gray-400 text-sm leading-7">
-          Your reliable portal for the latest government job updates,
-          admit cards, and results. Built with speed and precision.
-        </p>
-
-        <div className="mt-6 border-l-2 border-gray-600 pl-4">
+            <footer className="bg-[#1f2937] text-white mt-auto py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+               <a href="/" className="mb-4 inline-flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity">
+                  <span className="text-2xl font-black text-[#eb1414] tracking-tighter uppercase font-sans">
+                    GOVEXAM
+                  </span>
+                  <span className="bg-[#eb1414] text-white text-md font-black px-1.5 py-[2px] rounded tracking-wide uppercase mt-1">
+                    NOTIFICATION
+                  </span>
+                </a>
+               <p className="text-gray-400 leading-relaxed text-sm">
+                 Your reliable portal for the latest government job updates, admit cards, and results. Built with speed and precision.
+               </p>
+               <div className="mt-6 border-l-2 border-gray-600 pl-4">
           <p className="text-xs leading-6 text-gray-500">
             <strong>Disclaimer:</strong> GOVEXAM NOTIFICATION is an
             independent educational news portal and job aggregator. We are
@@ -696,129 +684,35 @@ export default function App() {
             information from official sources to help job seekers find
             updates easily. Always verify details on the official websites.
           </p>
+            </div>
+            <div>
+               <h3 className="text-lg font-bold mb-4 text-white">Important Links</h3>
+               <ul className="space-y-2 text-sm text-gray-400">
+                  <li><a href="/" className="hover:text-white hover:pl-1 transition-all">Home</a></li>
+                  <li><a href="/" className="hover:text-white hover:pl-1 transition-all">Latest Jobs</a></li>
+                  <li><a href="/" className="hover:text-white hover:pl-1 transition-all">Results</a></li>
+                  <li><a href="mailto:official.examnotification@gmail.com" className="hover:text-white hover:pl-1 transition-all">Contact Us</a></li>
+               </ul>
+            </div>
+            <div>
+               <h3 className="text-lg font-bold mb-4 text-white">Connect</h3>
+               <ul className="space-y-4 text-sm text-gray-400">
+                  <li><a href="https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d" className="hover:text-emerald-400 transition-colors flex items-center gap-3"><MessageCircle className="w-5 h-5 text-emerald-400" /> WhatsApp Channel</a></li>
+                  <li><a href="#" className="hover:text-sky-400 transition-colors flex items-center gap-3"><Send className="w-5 h-5 text-sky-400" /> Telegram Group</a></li>
+               </ul>
+            </div>
         </div>
-      </div>
-
-      {/* Important Links */}
-      <div>
-        <h3 className="text-2xl font-bold mb-5">
-          Important Links
-        </h3>
-
-        <ul className="space-y-3 text-gray-400">
-          <li>
-            <a href="/" className="hover:text-white transition">
-              Home
-            </a>
-          </li>
-
-          <li>
-            <a
-              href="/?path=%2Flatest-jobs%2F"
-              className="hover:text-white transition"
-            >
-              Latest Jobs
-            </a>
-          </li>
-
-          <li>
-            <a
-              href="/?path=%2Fresults%2F"
-              className="hover:text-white transition"
-            >
-              Results
-            </a>
-          </li>
-
-          <li>
-            <button
-              onClick={() => setActiveModal("contact")}
-              className="hover:text-white transition"
-            >
-              Contact Us
-            </button>
-          </li>
-        </ul>
-      </div>
-
-      {/* Connect */}
-      <div>
-        <h3 className="text-2xl font-bold mb-5">
-          Connect
-        </h3>
-
-        <ul className="space-y-3">
-          <li>
-            <a
-              href="https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 text-gray-400 hover:text-green-400 transition"
-            >
-              <MessageCircle className="w-5 h-5" />
-              WhatsApp Channel
-            </a>
-          </li>
-
-          <li>
-            <a
-              href="#"
-              className="flex items-center gap-3 text-gray-400 hover:text-sky-400 transition"
-            >
-              <Send className="w-5 h-5" />
-              Telegram Group
-            </a>
-          </li>
-        </ul>
-      </div>
-
-    </div>
-
-    {/* Bottom Section */}
-    <div className="border-t border-gray-700 mt-10 pt-6">
-
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-
-        <div className="text-center md:text-left">
-          <p className="text-sm text-gray-300">
-            © 2018 <strong>GOVEXAM NOTIFICATION</strong>. All rights reserved.
-          </p>
-
-          <p className="text-xs text-gray-500 mt-2">
-            Contact :
-            <a
-              href="mailto:official.examnotification@gmail.com"
-              className="ml-1 hover:text-white"
-            >
-              official.examnotification@gmail.com
-            </a>
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-gray-800 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col items-start text-left gap-1">
+            <p>&copy; 2008 GOVEXAM NOTIFICATION. All rights reserved.</p>
+            <p className="text-xs">Contact: official.examnotification@gmail.com</p>
+          </div>
+          <div className="flex items-center gap-4 text-xs font-medium uppercase tracking-wider">
+             <button onClick={() => setActiveModal('disclaimer')} className="hover:text-gray-300 transition-colors">Disclaimer</button>
+             <button onClick={() => setActiveModal('privacy')} className="hover:text-gray-300 transition-colors">Privacy Policy</button>
+          </div>
         </div>
-
-        <div className="flex items-center gap-6 text-sm text-gray-400">
-
-          <button
-            onClick={() => setActiveModal("disclaimer")}
-            className="hover:text-white transition"
-          >
-            Disclaimer
-          </button>
-
-          <button
-            onClick={() => setActiveModal("privacy")}
-            className="hover:text-white transition"
-          >
-            Privacy Policy
-          </button>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-</footer>
+      </footer>
 
       {/* Floating PWA Install Banner */}
       {showInstallBanner && !isAppInstalled && (
