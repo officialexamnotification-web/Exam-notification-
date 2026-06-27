@@ -152,22 +152,30 @@ export default function App() {
       try {
         const response = await fetch(`/api/scrape?path=${encodeURIComponent(path)}`);
         
+        // Read response body as text first, then parse as JSON.
+        // This avoids the "body already consumed" bug when response.json() fails.
+        const responseText = await response.text();
+
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API Error:', response.status, errorText);
-          setError(`Server error: ${response.status}. Please try again.`);
+          console.error('API Error:', response.status, responseText);
+          // Try to extract a friendly error message from the response
+          try {
+            const errData = JSON.parse(responseText);
+            setError(errData.error || `Server error: ${response.status}. Please try again.`);
+          } catch {
+            setError(`Server error: ${response.status}. Please try again.`);
+          }
           setLoading(false);
           return;
         }
         
         let data;
         try {
-          data = await response.json();
+          data = JSON.parse(responseText);
         } catch (jsonError) {
           console.error('JSON Parse Error:', jsonError);
-          const errorText = await response.text();
-          console.error('Response text:', errorText);
-          setError('Invalid response from server. Please try again.');
+          console.error('Response text:', responseText);
+          setError('Server se data load nahi ho paya. Please page refresh karein.');
           setLoading(false);
           return;
         }
