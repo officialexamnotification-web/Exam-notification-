@@ -28,10 +28,33 @@ async function initFirebaseAdmin() {
 }
 initFirebaseAdmin();
 
-// Cache storage to minimize requests to the target website (avoid getting blocked)
-const cache = new Map<string, { data: any, timestamp: number }>();
-const inFlightRequests = new Map<string, Promise<any>>();
+// Persistent cache storage using JSON file
+const CACHE_FILE = path.join(__dirname, 'cache.json');
 const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+
+// Load cache from file on startup
+let cache = new Map<string, { data: any, timestamp: number }>();
+try {
+  if (fs.existsSync(CACHE_FILE)) {
+    const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
+    cache = new Map(Object.entries(cacheData));
+    console.log(`[CACHE] Loaded ${cache.size} items from ${CACHE_FILE}`);
+  }
+} catch (e) {
+  console.log('[CACHE] No existing cache file found, starting fresh');
+}
+
+// Save cache to file
+const saveCache = () => {
+  try {
+    const cacheObj = Object.fromEntries(cache);
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(cacheObj, null, 2));
+  } catch (e) {
+    console.error('[CACHE] Failed to save cache:', e);
+  }
+};
+
+const inFlightRequests = new Map<string, Promise<any>>();
 
 // Initialize Firebase SDK
 let db: any;
@@ -464,7 +487,10 @@ async function startServer() {
               const homeDocRef = doc(db, 'home_data', 'index');
               const homeDoc = await getDoc(homeDocRef);
               if (homeDoc.exists()) {
-                  return res.json(maskDataSequence(homeDoc.data()));
+                  const homeData = homeDoc.data();
+                  cache.set('home_data_index', { data: homeData, timestamp: Date.now() });
+                  saveCache();
+                  return res.json(maskDataSequence(homeData));
               }
           } catch (e: any) {
               console.error('Home doc fetch failed:', e.message);
@@ -472,6 +498,13 @@ async function startServer() {
           
           if (serverCache.has('home_data_index')) {
               return res.json(maskDataSequence(serverCache.get('home_data_index')));
+          }
+          
+          if (cache.has('home_data_index')) {
+              const cached = cache.get('home_data_index');
+              if (Date.now() - cached.timestamp < CACHE_DURATION_MS) {
+                  return res.json(maskDataSequence(cached.data));
+              }
           }
 
           return res.status(503).json({
@@ -504,6 +537,8 @@ async function startServer() {
                       const catDoc = await getDoc(catDocRef);
                       if (catDoc.exists()) {
                           data = catDoc.data();
+                          cache.set(`category_pages_${categoryId}`, { data, timestamp: Date.now() });
+                          saveCache();
                       }
                   } catch (e: any) {
                       console.error(`Category doc fetch failed for ${categoryId}:`, e.message);
@@ -511,6 +546,13 @@ async function startServer() {
 
                   if (!data && serverCache.has(`category_pages_${categoryId}`)) {
                       data = serverCache.get(`category_pages_${categoryId}`);
+                  }
+                  
+                  if (!data && cache.has(`category_pages_${categoryId}`)) {
+                      const cached = cache.get(`category_pages_${categoryId}`);
+                      if (Date.now() - cached.timestamp < CACHE_DURATION_MS) {
+                          data = cached.data;
+                      }
                   }
                   
                   if (data) {
@@ -878,8 +920,12 @@ for (const [key, value] of serverCache.entries()) {
               // Apply cleanText to entire HTML as final safety net
               const cleanText = (text: string) => {
                 if (!text) return text;
-                return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official Exam Notification Website')
-                           .replace(/sarkari\s*result/ig, 'Official Exam Notification Website');
+                return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official GOVEXAM NOTIFICATION Website')
+                           .replace(/sarkari\s*result/ig, 'Official GOVEXAM NOTIFICATION Website')
+                           .replace(/sarkari\s*naukri/ig, 'GOVEXAM NOTIFICATION')
+                           .replace(/exam\s+notification/ig, 'GOVEXAM NOTIFICATION')
+                           .replace(/©\s*2008\s+Exam\s+Notification/ig, '© 2008 GOVEXAM NOTIFICATION')
+                           .replace(/official\.sarkarinaukarijob@gmail\.com/ig, 'official.examnotification@gmail.com');
               };
               cleanContent = cleanText(cleanContent);
           }

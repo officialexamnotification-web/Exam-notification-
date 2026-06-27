@@ -222,11 +222,11 @@ export default function App() {
                       });
                       finalContent = doc.body.innerHTML;
                       
-                      if (!finalContent.includes('Join Official Exam Notification Channels')) {
+                      if (!finalContent.includes('Join Official GOVEXAM NOTIFICATION Channels')) {
                           finalContent += `
                             <div class="my-8 rounded-lg overflow-hidden border border-blue-900/20 bg-blue-50/30 shadow-sm text-center">
                                 <div class="primary-table-heading p-3 text-white font-bold text-lg">
-                                   Join Official Exam Notification Channels
+                                   Join Official GOVEXAM NOTIFICATION Channels
                                 </div>
                                 <div class="p-5 flex flex-col sm:flex-row items-center justify-center gap-4">
                                     <a href="https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d" target="_blank" class="flex items-center justify-center gap-2 px-6 py-3 bg-[#25D366] hover:bg-[#20b857] text-white font-bold rounded-full transition-transform hover:-translate-y-1 shadow-md w-full sm:w-auto">

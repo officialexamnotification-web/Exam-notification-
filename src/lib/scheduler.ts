@@ -1,13 +1,45 @@
 import * as cheerio from "cheerio";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import cron from "node-cron";
+import * as fs from "fs";
+import * as path from "path";
 
 const targetUrlBase = "https://sarkariresult.com.cm";
 
+// Persistent cache storage using JSON file
+const CACHE_FILE = path.join(__dirname, '../../cache.json');
+const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+
+// Load cache from file on startup
+let persistentCache = new Map<string, { data: any, timestamp: number }>();
+try {
+  if (fs.existsSync(CACHE_FILE)) {
+    const cacheData = JSON.parse(fs.readFileSync(CACHE_FILE, 'utf-8'));
+    persistentCache = new Map(Object.entries(cacheData));
+    console.log(`[CACHE] Loaded ${persistentCache.size} items from ${CACHE_FILE}`);
+  }
+} catch (e) {
+  console.log('[CACHE] No existing cache file found, starting fresh');
+}
+
+// Save cache to file
+export const savePersistentCache = () => {
+  try {
+    const cacheObj = Object.fromEntries(persistentCache);
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(cacheObj, null, 2));
+  } catch (e) {
+    console.error('[CACHE] Failed to save cache:', e);
+  }
+};
+
 const cleanText = (text: string) => {
   if (!text) return text;
-  return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official Exam Notification Website')
-             .replace(/sarkari\s*result/ig, 'Official Exam Notification Website');
+  return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official GOVEXAM NOTIFICATION Website')
+             .replace(/sarkari\s*result/ig, 'Official GOVEXAM NOTIFICATION Website')
+             .replace(/sarkari\s*naukri/ig, 'GOVEXAM NOTIFICATION')
+             .replace(/exam\s+notification/ig, 'GOVEXAM NOTIFICATION')
+             .replace(/©\s*2008\s+Exam\s+Notification/ig, '© 2008 GOVEXAM NOTIFICATION')
+             .replace(/official\.sarkarinaukarijob@gmail\.com/ig, 'official.examnotification@gmail.com');
 };
 
 const replaceHowToWithYouTubeCTA = (contentHtml: string, pageTitle: string): string => {
@@ -604,11 +636,12 @@ export async function scrapeJobPost(db: any, path: string, isNew: boolean = true
 
       $finalContent.append($fallbackContainer);
     }
+    
 // Add User's Custom Social Media Block at the end of the post
     const userSocialBlock = `
       <div class="my-8 rounded-lg overflow-hidden border border-blue-900/20 bg-blue-50/30 shadow-sm text-center">
           <div class="primary-table-heading p-3 text-white font-bold text-lg">
-             Join Official Exam Notification Channels
+             Join Official GOVEXAM NOTIFICATION Channels
           </div>
           <div class="p-5 flex flex-col sm:flex-row items-center justify-center gap-4">
               <a href="https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d" target="_blank" class="flex items-center justify-center gap-2 px-6 py-3 bg-[#25D366] hover:bg-[#20b857] text-white font-bold rounded-full transition-transform hover:-translate-y-1 shadow-md w-full sm:w-auto">
@@ -665,6 +698,8 @@ export async function scrapeJobPost(db: any, path: string, isNew: boolean = true
     }
 
     serverCache.set(`jobs_${jobId}`, jobDoc);
+    persistentCache.set(`jobs_${jobId}`, { data: jobDoc, timestamp: Date.now() });
+    savePersistentCache();
 
     try {
         await setDoc(doc(db, 'jobs', jobId), jobDoc, { merge: true });
@@ -825,6 +860,8 @@ export async function runScraper(db: any) {
     };
 
     serverCache.set('home_data_index', homeData);
+    persistentCache.set('home_data_index', { data: homeData, timestamp: Date.now() });
+    savePersistentCache();
 
     try {
         await setDoc(doc(db, 'home_data', 'index'), homeData);
