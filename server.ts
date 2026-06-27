@@ -986,6 +986,60 @@ for (const [key, value] of serverCache.entries()) {
                            .replace(/sarkari\s*result/ig, 'Official Exam Notification Website');
               };
               cleanContent = cleanText(cleanContent);
+
+              // Remove table rows with links to pages that don't exist in our database
+              try {
+                  const $c = cheerio.load(cleanContent, { decodeEntities: false });
+                  let removedCount = 0;
+                  
+                  $c('tr').each((_, tr) => {
+                      const $tr = $c(tr);
+                      const $links = $tr.find('a');
+                      
+                      $links.each((_, a) => {
+                          const href = $c(a).attr('href') || '';
+                          let linkPath = '';
+                          
+                          // Extract path from /?path=/some-path/ format
+                          if (href.includes('?path=')) {
+                              try {
+                                  const pathMatch = href.match(/[?&]path=([^&]+)/);
+                                  if (pathMatch) linkPath = decodeURIComponent(pathMatch[1]);
+                              } catch (e) {}
+                          } 
+                          // Also handle direct internal paths like /some-path/
+                          else if (href.startsWith('/') && !href.startsWith('//') && href.length > 1) {
+                              linkPath = href;
+                          }
+                          
+                          if (linkPath && linkPath.startsWith('/') && linkPath.length > 1) {
+                              const linkJobId = encodeURIComponent(linkPath).replace(/\./g, '%2E');
+                              const existsInCache = serverCache.has(`jobs_${linkJobId}`);
+                              
+                              if (!existsInCache) {
+                                  // Check if we can find it by trying common variations
+                                  const pathWithoutTrailingSlash = linkPath.replace(/\/$/, '');
+                                  const pathWithTrailingSlash = linkPath.endsWith('/') ? linkPath : linkPath + '/';
+                                  const altId1 = encodeURIComponent(pathWithoutTrailingSlash).replace(/\./g, '%2E');
+                                  const altId2 = encodeURIComponent(pathWithTrailingSlash).replace(/\./g, '%2E');
+                                  
+                                  if (!serverCache.has(`jobs_${altId1}`) && !serverCache.has(`jobs_${altId2}`)) {
+                                      $tr.remove();
+                                      removedCount++;
+                                      return false; // break inner loop since row is already removed
+                                  }
+                              }
+                          }
+                      });
+                  });
+                  
+                  if (removedCount > 0) {
+                      cleanContent = $c('body').html() || cleanContent;
+                      console.log(`[LINK CLEANUP] Removed ${removedCount} table rows with unavailable links from: ${targetPath}`);
+                  }
+              } catch (cleanupErr: any) {
+                  console.error('[LINK CLEANUP ERROR]:', cleanupErr.message);
+              }
           }
           
           return res.json({
