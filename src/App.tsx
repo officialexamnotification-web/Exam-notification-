@@ -659,8 +659,7 @@ export default function App() {
           </div>
         )}
       </main>
-
-            <footer className="bg-[#1f2937] text-white mt-auto py-10">
+      <footer className="bg-[#1f2937] text-white mt-auto py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
                <a href="/" className="mb-4 inline-flex items-center gap-1.5 cursor-pointer hover:opacity-90 transition-opacity">
