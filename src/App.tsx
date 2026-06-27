@@ -666,7 +666,7 @@ export default function App() {
     {/* Top Section */}
     <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
 
-      {/* Logo */}
+      {/* Logo & About */}
       <div>
         <a
           href="/"
@@ -682,26 +682,30 @@ export default function App() {
         </a>
 
         <p className="mt-5 text-gray-400 text-sm leading-7">
-          Your reliable portal for the latest Government Job Notifications,
-          Admit Cards, Results, Answer Keys and Exam Updates across India.
+          Your reliable portal for the latest government job updates,
+          admit cards, and results. Built with speed and precision.
         </p>
 
         <div className="mt-6 border-l-2 border-gray-600 pl-4">
           <p className="text-xs leading-6 text-gray-500">
-            <strong>Disclaimer:</strong> GOVEXAM NOTIFICATION is an independent
-            educational news portal and is <strong>NOT</strong> affiliated with
-            any Government department, board or commission. We only publish
-            information collected from official sources.
+            <strong>Disclaimer:</strong> GOVEXAM NOTIFICATION is an
+            independent educational news portal and job aggregator. We are
+            <strong> NOT </strong>
+            associated with any government organization, board, or
+            commission. We only assemble and provide publicly available
+            information from official sources to help job seekers find
+            updates easily. Always verify details on the official websites.
           </p>
         </div>
       </div>
 
-      {/* Links */}
+      {/* Important Links */}
       <div>
-        <h3 className="text-xl font-bold mb-5">Important Links</h3>
+        <h3 className="text-2xl font-bold mb-5">
+          Important Links
+        </h3>
 
         <ul className="space-y-3 text-gray-400">
-
           <li>
             <a href="/" className="hover:text-white transition">
               Home
@@ -709,35 +713,41 @@ export default function App() {
           </li>
 
           <li>
-            <a href="/?path=%2Fcategory%2Flatest-job%2F" className="hover:text-white transition">
+            <a
+              href="/?path=%2Flatest-jobs%2F"
+              className="hover:text-white transition"
+            >
               Latest Jobs
             </a>
           </li>
 
           <li>
-            <a href="/?path=%2Fcategory%2Fresult%2F" className="hover:text-white transition">
+            <a
+              href="/?path=%2Fresults%2F"
+              className="hover:text-white transition"
+            >
               Results
             </a>
           </li>
 
           <li>
-            <a
-              href="mailto:official.examnotification@gmail.com"
+            <button
+              onClick={() => setActiveModal("contact")}
               className="hover:text-white transition"
             >
               Contact Us
-            </a>
+            </button>
           </li>
-
         </ul>
       </div>
 
       {/* Connect */}
       <div>
-        <h3 className="text-xl font-bold mb-5">Connect With Us</h3>
+        <h3 className="text-2xl font-bold mb-5">
+          Connect
+        </h3>
 
-        <ul className="space-y-4">
-
+        <ul className="space-y-3">
           <li>
             <a
               href="https://whatsapp.com/channel/0029Vb8PnI3JENy63JF6DG3d"
@@ -756,24 +766,22 @@ export default function App() {
               className="flex items-center gap-3 text-gray-400 hover:text-sky-400 transition"
             >
               <Send className="w-5 h-5" />
-              Telegram Channel
+              Telegram Group
             </a>
           </li>
-
         </ul>
       </div>
 
     </div>
 
-    {/* Bottom */}
+    {/* Bottom Section */}
     <div className="border-t border-gray-700 mt-10 pt-6">
 
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
 
         <div className="text-center md:text-left">
-
           <p className="text-sm text-gray-300">
-            © 2026 <strong>GOVEXAM NOTIFICATION</strong>. All Rights Reserved.
+            © 2018 <strong>GOVEXAM NOTIFICATION</strong>. All rights reserved.
           </p>
 
           <p className="text-xs text-gray-500 mt-2">
@@ -785,10 +793,9 @@ export default function App() {
               official.examnotification@gmail.com
             </a>
           </p>
-
         </div>
 
-        <div className="flex gap-6 text-sm text-gray-400">
+        <div className="flex items-center gap-6 text-sm text-gray-400">
 
           <button
             onClick={() => setActiveModal("disclaimer")}
