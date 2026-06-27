@@ -679,14 +679,22 @@ export default function App() {
                </ul>
             </div>
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-gray-800 text-center text-sm text-gray-500 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex flex-col items-start text-left gap-1">
-            <p>&copy; 2008 GOVEXAM NOTIFICATION. All rights reserved.</p>
-            <p className="text-xs">Contact: official.examnotification@gmail.com</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-gray-800 text-sm text-gray-500 flex flex-col gap-6">
+          <div className="w-full text-justify md:text-center">
+            <p className="text-[11px] md:text-xs text-gray-400 leading-relaxed">
+              <strong className="text-gray-300 uppercase tracking-wider">Disclaimer:</strong> GOVEXAM NOTIFICATION is an independent educational news portal and job aggregator. We are <strong>NOT</strong> associated with any government organization, board, or commission. We only assemble and provide publicly available information from official sources to help job seekers find updates easily. Always verify details on the official websites.
+            </p>
           </div>
-          <div className="flex items-center gap-4 text-xs font-medium uppercase tracking-wider">
-             <button onClick={() => setActiveModal('disclaimer')} className="hover:text-gray-300 transition-colors">Disclaimer</button>
-             <button onClick={() => setActiveModal('privacy')} className="hover:text-gray-300 transition-colors">Privacy Policy</button>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex flex-col md:flex-row gap-2 md:gap-4 items-center">
+              <p>&copy; 2008 GOVEXAM NOTIFICATION. All rights reserved.</p>
+              <span className="hidden md:inline text-gray-600">|</span>
+              <p className="text-xs">Contact: official.examnotification@gmail.com</p>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-medium uppercase tracking-wider">
+               <button onClick={() => setActiveModal('disclaimer')} className="hover:text-gray-300 transition-colors">Disclaimer</button>
+               <button onClick={() => setActiveModal('privacy')} className="hover:text-gray-300 transition-colors">Privacy Policy</button>
+            </div>
           </div>
         </div>
       </footer>
