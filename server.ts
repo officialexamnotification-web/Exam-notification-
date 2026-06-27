@@ -957,12 +957,8 @@ for (const [key, value] of serverCache.entries()) {
               // Apply cleanText to entire HTML as final safety net
               const cleanText = (text: string) => {
                 if (!text) return text;
-                return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official GOVEXAM NOTIFICATION Website')
-                           .replace(/sarkari\s*result/ig, 'Official GOVEXAM NOTIFICATION Website')
-                           .replace(/sarkari\s*naukri/ig, 'GOVEXAM NOTIFICATION')
-                           .replace(/exam\s+notification/ig, 'GOVEXAM NOTIFICATION')
-                           .replace(/©\s*2008\s+Exam\s+Notification/ig, '© 2008 GOVEXAM NOTIFICATION')
-                           .replace(/official\.sarkarinaukarijob@gmail\.com/ig, 'official.examnotification@gmail.com');
+                return text.replace(/official\s+sarkari\s+result\s+website/ig, 'Official Exam Notification Website')
+                           .replace(/sarkari\s*result/ig, 'Official Exam Notification Website');
               };
               cleanContent = cleanText(cleanContent);
           }
