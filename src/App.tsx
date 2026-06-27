@@ -64,7 +64,7 @@ export default function App() {
   useEffect(() => {
     // Update document title and meta tags for SEO and social media
     if (postTitle && !isHome) {
-      document.title = `${postTitle} | GOVEXAM NOTIFICATION`;
+      document.title = `GOVEXAM NOTIFICATION - ${postTitle}`;
       
       // Update Open Graph meta tags dynamically with small icon
       const ogTitle = document.querySelector('meta[property="og:title"]');
@@ -73,13 +73,13 @@ export default function App() {
       const twitterTitle = document.querySelector('meta[name="twitter:title"]');
       const twitterDescription = document.querySelector('meta[name="twitter:description"]');
       
-      if (ogTitle) ogTitle.setAttribute('content', `${postTitle} | GOVEXAM NOTIFICATION`);
+      if (ogTitle) ogTitle.setAttribute('content', `GOVEXAM NOTIFICATION - ${postTitle}`);
       if (ogDescription) ogDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
       if (ogUrl) ogUrl.setAttribute('content', `${window.location.origin}${currentPath}`);
-      if (twitterTitle) twitterTitle.setAttribute('content', `${postTitle} | GOVEXAM NOTIFICATION`);
+      if (twitterTitle) twitterTitle.setAttribute('content', `GOVEXAM NOTIFICATION - ${postTitle}`);
       if (twitterDescription) twitterDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
     } else {
-      document.title = 'Latest Jobs, Admit Cards, Results | GOVEXAM NOTIFICATION';
+      document.title = 'GOVEXAM NOTIFICATION - Latest Jobs, Admit Cards, Results';
       
       // Reset meta tags for home page
       const ogTitle = document.querySelector('meta[property="og:title"]');
@@ -88,10 +88,10 @@ export default function App() {
       const twitterTitle = document.querySelector('meta[name="twitter:title"]');
       const twitterDescription = document.querySelector('meta[name="twitter:description"]');
       
-      if (ogTitle) ogTitle.setAttribute('content', 'Latest Jobs, Admit Cards, Results | GOVEXAM NOTIFICATION');
+      if (ogTitle) ogTitle.setAttribute('content', 'GOVEXAM NOTIFICATION - Latest Jobs, Admit Cards, Results');
       if (ogDescription) ogDescription.setAttribute('content', 'Get latest government job notifications, results, admit cards, and exam updates in India.');
       if (ogUrl) ogUrl.setAttribute('content', window.location.origin);
-      if (twitterTitle) twitterTitle.setAttribute('content', 'Latest Jobs, Admit Cards, Results | GOVEXAM NOTIFICATION');
+      if (twitterTitle) twitterTitle.setAttribute('content', 'GOVEXAM NOTIFICATION - Latest Jobs, Admit Cards, Results');
       if (twitterDescription) twitterDescription.setAttribute('content', 'Get latest government job notifications, results, admit cards, and exam updates in India.');
     }
   }, [postTitle, isHome, currentPath]);
@@ -276,7 +276,7 @@ export default function App() {
           }
           if (data.title) {
             const cleanTitle = data.title.replace(/(Official\s+Sarkari\s+Result\s+Website|Sarkari\s*Result|Sarkari\s*Naukri|\.com|\.cm|\|)/gi, '').trim();
-            document.title = `${cleanTitle} | GOVEXAM NOTIFICATION`;
+            document.title = `GOVEXAM NOTIFICATION - ${cleanTitle}`;
           }
         } else {
           setError(data.error);
