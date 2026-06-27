@@ -683,7 +683,6 @@ export default function App() {
             information from official sources to help job seekers find
             updates easily. Always verify details on the official websites.
           </p>
-            </div>
             <div>
                <h3 className="text-lg font-bold mb-4 text-white">Important Links</h3>
                <ul className="space-y-2 text-sm text-gray-400">
