@@ -673,16 +673,20 @@ export default function App() {
                <p className="text-gray-400 leading-relaxed text-sm">
                  Your reliable portal for the latest government job updates, admit cards, and results. Built with speed and precision.
                </p>
-               <div className="mt-6 border-l-2 border-gray-600 pl-4">
-          <p className="text-xs leading-6 text-gray-500">
-            <strong>Disclaimer:</strong> GOVEXAM NOTIFICATION is an
-            independent educational news portal and job aggregator. We are
-            <strong> NOT </strong>
-            associated with any government organization, board, or
-            commission. We only assemble and provide publicly available
-            information from official sources to help job seekers find
-            updates easily. Always verify details on the official websites.
-          </p>
+                              <div className="mt-6 border-l-2 border-gray-600 pl-4">
+                  <p className="text-xs leading-6 text-gray-500">
+                    <strong>Disclaimer:</strong> GOVEXAM NOTIFICATION is an
+                    independent educational news portal and job aggregator. We are
+                    <strong> NOT </strong>
+                    associated with any government organization, board, or
+                    commission. We only assemble and provide publicly available
+                    information from official sources to help job seekers find
+                    updates easily. Always verify details on the official websites.
+                  </p>
+               </div>   {/* <-- Missing closing div */}
+
+            </div>      {/* <-- First column (logo + description + disclaimer) closed */}
+
             <div>
                <h3 className="text-lg font-bold mb-4 text-white">Important Links</h3>
                <ul className="space-y-2 text-sm text-gray-400">
