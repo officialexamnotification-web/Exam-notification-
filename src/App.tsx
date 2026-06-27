@@ -700,6 +700,7 @@ export default function App() {
               <p>&copy; 2008 GOVEXAM NOTIFICATION. All rights reserved.</p>
               <span className="hidden md:inline text-gray-600">|</span>
               <p className="text-xs">Contact: official.examnotification@gmail.com</p>
+			  </ul>
             </div>
             <div className="flex items-center gap-4 text-xs font-medium uppercase tracking-wider">
                <button onClick={() => setActiveModal('disclaimer')} className="hover:text-gray-300 transition-colors">Disclaimer</button>
