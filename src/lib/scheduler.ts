@@ -356,10 +356,19 @@ async function sendFCMNotification(title: string, path: string, db: any, content
     const { getMessaging } = await import("firebase-admin/messaging");
     await getMessaging().send({
       topic: "broadcast_alerts",
+      notification: {
+        title: "🚨 New Update: " + title,
+        body: "Tap to view full details instantly"
+      },
       data: {
         title: "Latest Update: " + title,
         body: "Tap to view full details",
         url: "/?path=" + encodeURIComponent(path)
+      },
+      webpush: {
+        fcmOptions: {
+          link: "/?path=" + encodeURIComponent(path)
+        }
       }
     });
     console.log(`[FCM SENT] ${status} for: ${path}`);
