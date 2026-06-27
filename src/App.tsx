@@ -70,18 +70,14 @@ export default function App() {
       const ogTitle = document.querySelector('meta[property="og:title"]');
       const ogDescription = document.querySelector('meta[property="og:description"]');
       const ogUrl = document.querySelector('meta[property="og:url"]');
-      const ogImage = document.querySelector('meta[property="og:image"]');
       const twitterTitle = document.querySelector('meta[name="twitter:title"]');
       const twitterDescription = document.querySelector('meta[name="twitter:description"]');
-      const twitterImage = document.querySelector('meta[name="twitter:image"]');
       
       if (ogTitle) ogTitle.setAttribute('content', `GOVEXAM NOTIFICATION - ${postTitle}`);
       if (ogDescription) ogDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
       if (ogUrl) ogUrl.setAttribute('content', `${window.location.origin}${currentPath}`);
-      if (ogImage) ogImage.setAttribute('content', `${window.location.origin}/icon.svg`);
       if (twitterTitle) twitterTitle.setAttribute('content', `GOVEXAM NOTIFICATION - ${postTitle}`);
       if (twitterDescription) twitterDescription.setAttribute('content', `Apply online for ${postTitle}. Get complete details, eligibility, last date, and application process.`);
-      if (twitterImage) twitterImage.setAttribute('content', `${window.location.origin}/icon.svg`);
     } else {
       document.title = 'GOVEXAM NOTIFICATION - Latest Jobs, Admit Cards, Results';
       
@@ -89,18 +85,14 @@ export default function App() {
       const ogTitle = document.querySelector('meta[property="og:title"]');
       const ogDescription = document.querySelector('meta[property="og:description"]');
       const ogUrl = document.querySelector('meta[property="og:url"]');
-      const ogImage = document.querySelector('meta[property="og:image"]');
       const twitterTitle = document.querySelector('meta[name="twitter:title"]');
       const twitterDescription = document.querySelector('meta[name="twitter:description"]');
-      const twitterImage = document.querySelector('meta[name="twitter:image"]');
       
       if (ogTitle) ogTitle.setAttribute('content', 'GOVEXAM NOTIFICATION - Latest Jobs, Admit Cards, Results');
       if (ogDescription) ogDescription.setAttribute('content', 'Get latest government job notifications, results, admit cards, and exam updates in India.');
       if (ogUrl) ogUrl.setAttribute('content', window.location.origin);
-      if (ogImage) ogImage.setAttribute('content', `${window.location.origin}/icon.svg`);
       if (twitterTitle) twitterTitle.setAttribute('content', 'GOVEXAM NOTIFICATION - Latest Jobs, Admit Cards, Results');
       if (twitterDescription) twitterDescription.setAttribute('content', 'Get latest government job notifications, results, admit cards, and exam updates in India.');
-      if (twitterImage) twitterImage.setAttribute('content', `${window.location.origin}/icon.svg`);
     }
   }, [postTitle, isHome, currentPath]);
 
