@@ -450,7 +450,24 @@ export default function App() {
           </div>
         )}
 
-        {loading && (
+        {loading && isHome && (
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+             {[1, 2, 3, 4, 5, 6].map(i => (
+               <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-200 h-[380px] p-0 flex flex-col overflow-hidden">
+                 <div className="bg-gray-100 p-4 border-b border-gray-200">
+                    <div className="h-6 bg-gray-300 rounded w-1/2 animate-pulse"></div>
+                 </div>
+                 <div className="p-4 space-y-4 flex-1">
+                   {[1, 2, 3, 4, 5, 6, 7].map(j => (
+                     <div key={j} className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
+                   ))}
+                 </div>
+               </div>
+             ))}
+           </div>
+        )}
+
+        {loading && !isHome && (
           <div className="flex flex-col justify-center items-center py-32 px-4 text-center">
             <div className="w-12 h-12 border-4 border-blue-200 border-t-[#104ba6] rounded-full animate-spin mb-4"></div>
             <div className="text-lg font-medium animate-pulse text-gray-500">Syncing latest updates...</div>
