@@ -144,13 +144,13 @@ async function startServer() {
       // Extract links from home page cache (trending and category lists)
       const homeData = serverCache.get('home_data_index');
       if (homeData) {
-        if (Array.isArray(homeData.trendingLinks)) {
-          homeData.trendingLinks.forEach((link: any) => {
+        if (Array.isArray(homeData.trending)) {
+          homeData.trending.forEach((link: any) => {
             if (link && link.path) paths.add(link.path);
           });
         }
-        if (Array.isArray(homeData.categories)) {
-          homeData.categories.forEach((cat: any) => {
+        if (Array.isArray(homeData.data)) {
+          homeData.data.forEach((cat: any) => {
             if (Array.isArray(cat.links)) {
               cat.links.forEach((link: any) => {
                 if (link && link.path) paths.add(link.path);
