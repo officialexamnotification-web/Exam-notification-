@@ -19,7 +19,7 @@ export default function NavBar({ activeTab, onNavClick, onOpenDisclaimer, onOpen
     { label: 'Download App', onClick: onDownloadApp },
     { label: 'Disclaimer', onClick: onOpenDisclaimer },
     { label: 'Privacy Policy', onClick: onOpenPrivacy },
-    { label: 'Contact Us', href: 'mailto:official.sarkarinaukarijob@gmail.com' }
+    { label: 'Contact Us', href: 'mailto:official.examnotification@gmail.com' }
   ];
 
   return (
