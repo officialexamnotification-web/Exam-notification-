@@ -1,3 +1,6 @@
+// DISABLED: SarkariResult scraping stopped due to trademark/copyright concerns
+// Use official government sources instead: uppbpb.gov.in, upsc.gov.in, ssc.nic.in, ibps.in
+/*
 import http from "node:http";
 http.get("http://0.0.0.0:3000/api/proxy?url=https://www.sarkariresult.com/2025/up-anganwadi-recruitment/", (res) => {
   let data = "";
@@ -7,3 +10,4 @@ http.get("http://0.0.0.0:3000/api/proxy?url=https://www.sarkariresult.com/2025/u
       console.log("Found matches:", match);
   });
 });
+*/

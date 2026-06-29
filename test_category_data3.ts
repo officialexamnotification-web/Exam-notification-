@@ -1,3 +1,6 @@
+// DISABLED: SarkariResult scraping stopped due to trademark/copyright concerns
+// Use official government sources instead: uppbpb.gov.in, upsc.gov.in, ssc.nic.in, ibps.in
+/*
 import * as cheerio from "cheerio";
 
 async function run() {
@@ -30,3 +33,5 @@ async function run() {
   }
 }
 run();
+
+*/
