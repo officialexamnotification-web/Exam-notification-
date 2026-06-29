@@ -29,6 +29,90 @@ const getAlternativeSource = (currentSource: string): string => {
   return sources[nextIndex];
 };
 
+// UPSC-specific job scraping function
+async function scrapeUPSCJobs(db: any) {
+  try {
+    console.log("[UPSC] Starting job scraping...");
+    const targetUrl = "https://upsc.gov.in/recruitment/recruitment-advertisement";
+    
+    const response = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      }
+    });
+
+    if (!response.ok) {
+      console.warn(`[UPSC] Failed to fetch: ${response.status}`);
+      return;
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+    
+    const jobs = [];
+    
+    // Extract job advertisements from UPSC
+    $('a').each((i, el) => {
+      const text = $(el).text().trim();
+      const href = $(el).attr('href');
+      
+      // Look for actual job postings
+      if (text.length > 15 && text.length < 300 && 
+          (text.includes('No.') || text.includes('Vacancy') || 
+           text.includes('Post') || text.includes('Examination') ||
+           text.includes('Interview') || text.includes('Result'))) {
+        
+        // Skip navigation links
+        if (text.includes('Active Examinations') || text.includes('Forthcoming Examinations')) {
+          return;
+        }
+        
+        const url = href ? (href.startsWith('http') ? href : `https://upsc.gov.in${href}`) : null;
+        
+        if (url) {
+          jobs.push({
+            title: text,
+            url: url,
+            source: 'UPSC',
+            scrapedAt: new Date().toISOString()
+          });
+        }
+      }
+    });
+    
+    console.log(`[UPSC] Found ${jobs.length} job advertisements`);
+    
+    // Store jobs in database
+    for (const job of jobs) {
+      try {
+        const jobId = encodeURIComponent(job.title).replace(/\./g, '%2E');
+        const jobRef = doc(db, 'jobs', jobId);
+        
+        // Check if job already exists
+        const existingJob = await getDoc(jobRef);
+        
+        if (!existingJob.exists()) {
+          await setDoc(jobRef, {
+            ...job,
+            createdAt: new Date().toISOString()
+          });
+          console.log(`[UPSC] New job added: ${job.title.substring(0, 50)}...`);
+          
+          // Send notification for new jobs
+          await sendFCMNotification(job.title, job.url, db, job.title, '[FCM NEW JOB]');
+        }
+      } catch (error) {
+        console.error(`[UPSC] Error storing job: ${error}`);
+      }
+    }
+    
+    console.log(`[UPSC] Scraping completed. Total jobs processed: ${jobs.length}`);
+    
+  } catch (error) {
+    console.error("[UPSC] Scraping error:", error);
+  }
+}
+
 // Persistent cache storage using JSON file
 const CACHE_FILE = path.join(__dirname, '../../cache.json');
 const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
@@ -1081,11 +1165,11 @@ export async function runScraper(db: any) {
 
 export function startCronScheduler(db: any) {
 
-  // Server start hote hi scrape chalao
-  runScraper(db);
+  // Server start hote hi UPSC scrape chalao
+  scrapeUPSCJobs(db);
 
-  // Fir har 3 ghante baad
+  // Fir har 3 ghante baad UPSC scrape
   cron.schedule("0 */3 * * *", () => {
-    runScraper(db);
+    scrapeUPSCJobs(db);
   });
 }
