@@ -4,7 +4,10 @@ import cron from "node-cron";
 import * as fs from "fs";
 import * as path from "path";
 
-const targetUrlBase = "https://sarkariresult.com.cm";
+// DISABLED: SarkariResult scraping stopped due to trademark/copyright concerns
+// const targetUrlBase = "https://sarkariresult.com.cm";
+// Use official government sources instead: uppbpb.gov.in, upsc.gov.in, ssc.nic.in, ibps.in
+const targetUrlBase = "";
 
 // Persistent cache storage using JSON file
 const CACHE_FILE = path.join(__dirname, '../../cache.json');

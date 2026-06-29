@@ -910,7 +910,11 @@ for (const [key, value] of serverCache.entries()) {
               }
           });
 
-          // 2. Query target website's live search page to index fresh/matching endpoints dynamically
+          // 2. DISABLED: Query target website's live search page - SarkariResult scraping stopped
+          // Use official government sources instead: uppbpb.gov.in, upsc.gov.in, ssc.nic.in, ibps.in
+          console.log(`[LIVE SEARCH] DISABLED - SarkariResult scraping stopped due to trademark/copyright concerns`);
+          /*
+          Original code disabled:
           try {
               console.log(`[LIVE SEARCH] Querying target website: https://sarkariresult.com.cm/?s=${encodeURIComponent(q)}`);
               const liveSearchResponse = await fetch(`https://sarkariresult.com.cm/?s=${encodeURIComponent(q)}`, {
@@ -957,10 +961,8 @@ for (const [key, value] of serverCache.entries()) {
                           } catch (e) {}
                       }
                   });
-              }
-          } catch (liveErr: any) {
-              console.error("[LIVE SEARCH ERROR]:", liveErr.message);
-          }
+          */
+          // Live search disabled - no error handling needed
 
           // Sort the scored candidates by score (highest relevance first)
           scoredLinks.sort((a, b) => b.score - a.score);
