@@ -5,6 +5,12 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { startCronScheduler, serverCache } from "./src/lib/scheduler";
 import fs from "fs";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Initialize Firebase Admin for FCM
 let adminApp: any = null;

@@ -3,6 +3,12 @@ import { doc, setDoc, getDoc } from "firebase/firestore";
 import cron from "node-cron";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// ES module equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Official Government Sources for Job Data
 const OFFICIAL_SOURCES = {
@@ -70,9 +76,16 @@ async function scrapeUPSCJobs(db: any) {
         const url = href ? (href.startsWith('http') ? href : `https://upsc.gov.in${href}`) : null;
         
         if (url) {
+          // Extract path from URL for compatibility with existing system
+          let path = url;
+          if (url.startsWith('https://upsc.gov.in')) {
+            path = url.replace('https://upsc.gov.in', '');
+          }
+          
           jobs.push({
             title: text,
             url: url,
+            path: path,
             source: 'UPSC',
             scrapedAt: new Date().toISOString()
           });
@@ -82,28 +95,28 @@ async function scrapeUPSCJobs(db: any) {
     
     console.log(`[UPSC] Found ${jobs.length} job advertisements`);
     
-    // Store jobs in database
-    for (const job of jobs) {
-      try {
-        const jobId = encodeURIComponent(job.title).replace(/\./g, '%2E');
-        const jobRef = doc(db, 'jobs', jobId);
-        
-        // Check if job already exists
-        const existingJob = await getDoc(jobRef);
-        
-        if (!existingJob.exists()) {
-          await setDoc(jobRef, {
-            ...job,
-            createdAt: new Date().toISOString()
-          });
-          console.log(`[UPSC] New job added: ${job.title.substring(0, 50)}...`);
-          
-          // Send notification for new jobs
-          await sendFCMNotification(job.title, job.url, db, job.title, '[FCM NEW JOB]');
+    // Log all jobs found
+    console.log(`[UPSC] Jobs extracted:`);
+    jobs.forEach((job, i) => {
+      console.log(`${i + 1}. ${job.title.substring(0, 80)}...`);
+      console.log(`   URL: ${job.url}`);
+      console.log(`   Path: ${job.path}`);
+    });
+    
+    // Process each job using the existing scrapeJobPost function for consistency
+    if (db) {
+      for (const job of jobs) {
+        try {
+          // Use the existing scrapeJobPost function to maintain same format
+          await scrapeJobPost(db, job.path, true, null);
+          console.log(`[UPSC] Job processed with existing format: ${job.title.substring(0, 50)}...`);
+        } catch (error: any) {
+          console.error(`[UPSC] Error processing job: ${error.message}`);
+          // Continue with other jobs even if one fails
         }
-      } catch (error) {
-        console.error(`[UPSC] Error storing job: ${error}`);
       }
+    } else {
+      console.log(`[UPSC] Database not available, skipping job processing`);
     }
     
     console.log(`[UPSC] Scraping completed. Total jobs processed: ${jobs.length}`);
