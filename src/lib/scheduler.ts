@@ -4,10 +4,30 @@ import cron from "node-cron";
 import * as fs from "fs";
 import * as path from "path";
 
-// DISABLED: SarkariResult scraping stopped due to trademark/copyright concerns
-// const targetUrlBase = "https://sarkariresult.com.cm";
-// Use official government sources instead: uppbpb.gov.in, upsc.gov.in, ssc.nic.in, ibps.in
-const targetUrlBase = "";
+// Official Government Sources for Job Data
+const OFFICIAL_SOURCES = {
+  upsc: "https://upsc.gov.in",
+  ssc: "https://ssc.nic.in",
+  ibps: "https://ibps.in",
+  railway: "https://rrc.gov.in",
+  upsssc: "https://upsssc.gov.in",
+  uppsc: "https://uppsc.up.nic.in",
+  uppolice: "https://uppolice.gov.in",
+  bpsc: "https://bpsc.bih.nic.in",
+  rpsc: "https://rpsc.rajasthan.gov.in",
+  mppsc: "https://mppsc.nic.in"
+};
+
+// Primary source for scraping (UPSC tested and working)
+const targetUrlBase = OFFICIAL_SOURCES.upsc;
+
+// Function to rotate between sources if primary fails
+const getAlternativeSource = (currentSource: string): string => {
+  const sources = Object.values(OFFICIAL_SOURCES);
+  const currentIndex = sources.indexOf(currentSource);
+  const nextIndex = (currentIndex + 1) % sources.length;
+  return sources[nextIndex];
+};
 
 // Persistent cache storage using JSON file
 const CACHE_FILE = path.join(__dirname, '../../cache.json');
