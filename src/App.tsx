@@ -416,14 +416,14 @@ export default function App() {
                 {activeModal === 'disclaimer' ? (
                   <div className="space-y-4 text-gray-600 text-sm leading-relaxed">
                     <p>
-                      Exam Notification is a private website that is not associated, endorsed or affiliated with any government institution, agency or department. The content available on this website is for informational purposes only and has been compiled from various reliable sources. Although we endeavor to keep the information accurate and up to date, we make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability or availability of the information.
+                      Govexam Notification is a private website that is not associated, endorsed or affiliated with any government institution, agency or department. The content available on this website is for informational purposes only and has been compiled from various reliable sources. Although we endeavor to keep the information accurate and up to date, we make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability or availability of the information.
                     </p>
                     <p>
                       Users are advised to independently verify the information before making any decisions based on the content of this site. We are not responsible for any errors or omissions, or for the results obtained from the use of this information. Any reliance you place on such information is therefore strictly at your own risk.
                     </p>
                     <hr className="my-4 border-gray-200" />
                     <p>
-                      Exam Notification एक निजी वेबसाइट है जो किसी भी सरकारी संस्थान, एजेंसी या विभाग से संबद्ध नहीं है। इस वेबसाइट पर उपलब्ध सामग्री केवल सूचनात्मक उद्देश्यों के लिए है और विभिन्न विश्वसनीय स्रोतों से संकलित की गई है। यद्यपि हम जानकारी को सटीक और अद्यतित रखने का प्रयास करते हैं, हम जानकारी की पूर्णता, सटीकता, विश्वसनीयता, उपयुक्तता या उपलब्धता के बारे में किसी भी प्रकार का, व्यक्त या निहित, कोई प्रतिनिधित्व या वारंटी नहीं देते हैं।
+                      Govexam Notification एक निजी वेबसाइट है जो किसी भी सरकारी संस्थान, एजेंसी या विभाग से संबद्ध नहीं है। इस वेबसाइट पर उपलब्ध सामग्री केवल सूचनात्मक उद्देश्यों के लिए है और विभिन्न विश्वसनीय स्रोतों से संकलित की गई है। यद्यपि हम जानकारी को सटीक और अद्यतित रखने का प्रयास करते हैं, हम जानकारी की पूर्णता, सटीकता, विश्वसनीयता, उपयुक्तता या उपलब्धता के बारे में किसी भी प्रकार का, व्यक्त या निहित, कोई प्रतिनिधित्व या वारंटी नहीं देते हैं।
                     </p>
                     <p>
                       उपयोगकर्ताओं को सलाह दी जाती है कि वे इस साइट की सामग्री के आधार पर कोई भी निर्णय लेने से पहले जानकारी को स्वतंत्र रूप से सत्यापित करें। हम किसी भी त्रुटि या चूक या इस जानकारी के उपयोग से प्राप्त परिणामों के लिए जिम्मेदार नहीं हैं। इसलिए ऐसी जानकारी पर आपके द्वारा की गई कोई भी निर्भरता पूरी तरह से आपके अपने जोखिम पर है।
