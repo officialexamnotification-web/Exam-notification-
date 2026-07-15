@@ -10,17 +10,17 @@ interface CategoryBlockProps {
 
 export default function CategoryBlock({ category, isFullHeight }: CategoryBlockProps) {
   const handleViewAllClick = () => {
-    // Generate proper category URL based on category title
+    // Generate proper category URL based on category title (matching sitemap URLs)
     let categoryPath = '';
     const titleLower = category.title.toLowerCase();
-    if (titleLower.includes('latest job')) categoryPath = '/category/latest-job/';
-    else if (titleLower.includes('result')) categoryPath = '/category/result/';
-    else if (titleLower.includes('admit card')) categoryPath = '/category/admit-card/';
-    else if (titleLower.includes('answer key')) categoryPath = '/category/answer-key/';
-    else if (titleLower.includes('syllabus')) categoryPath = '/category/syllabus/';
-    else if (titleLower.includes('admission')) categoryPath = '/category/admission/';
-    else if (titleLower.includes('calendar')) categoryPath = '/category/calendar/';
-    else if (titleLower.includes('document')) categoryPath = '/category/documents/';
+    if (titleLower.includes('latest job')) categoryPath = '/latest-jobs';
+    else if (titleLower.includes('result')) categoryPath = '/results';
+    else if (titleLower.includes('admit card')) categoryPath = '/admit-cards';
+    else if (titleLower.includes('answer key')) categoryPath = '/answer-keys';
+    else if (titleLower.includes('syllabus')) categoryPath = '/syllabus';
+    else if (titleLower.includes('admission')) categoryPath = '/admission';
+    else if (titleLower.includes('calendar')) categoryPath = '/calendar';
+    else if (titleLower.includes('document')) categoryPath = '/documents';
     else categoryPath = category.viewAllUrl || '#';
     
     // Navigate using the same format as NavBar
