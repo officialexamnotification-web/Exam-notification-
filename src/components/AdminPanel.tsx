@@ -158,12 +158,15 @@ export function AdminPanel() {
     try {
       setLoading(true);
       setError('');
+      console.log('[SAVE] Attempting to save job:', editingJob.id);
       // Use PUT body to send ID
       const res = await authFetch(`/api/admin/job`, {
         method: 'PUT',
         body: JSON.stringify({ id: editingJob.id, content: editContent, title: editingJob.title, path: editingJob.path })
       });
+      console.log('[SAVE] Response status:', res.status);
       const data = await res.json();
+      console.log('[SAVE] Response data:', data);
       if (data.success) {
         alert(data.message || "Saved successfully!");
         setEditingJob(null);
@@ -172,6 +175,7 @@ export function AdminPanel() {
         alert(data.error || "Save failed. Please try again.");
       }
     } catch (err: any) {
+      console.error('[SAVE ERROR]', err);
       alert(err.message || "Network error. Please check your connection.");
     } finally {
       setLoading(false);
