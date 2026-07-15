@@ -1828,6 +1828,8 @@ async function startServer() {
                    // Dynamic Fallback: Scan serverCache/Firestore jobs and construct list if empty
                    if (!data || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
                        const fallbackLinks: any[] = [];
+                       const seenPaths = new Set<string>(); // Deduplication by path
+                       
                        for (const [key, val] of serverCache.entries()) {
                            if (key.startsWith('jobs_')) {
                                const job = val;
@@ -1842,7 +1844,12 @@ async function startServer() {
                                     jobCat = determineJobCategory(job.title || '', job.path || '');
                                 }
 
+                               const jobPath = job.path || job.url;
+                               // Skip if already seen (deduplication)
+                               if (seenPaths.has(jobPath)) continue;
+                               
                                if (job && (jobCat === targetCat || (targetCat === 'admit-card' && (jobCat === 'admit-card' || jobCat === 'admit card')))) {
+                                   seenPaths.add(jobPath); // Mark as seen
                                    fallbackLinks.push({
                                        id: job.id || job.path,
                                        title: job.title,
