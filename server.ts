@@ -2859,6 +2859,11 @@ async function startServer() {
       if (!existingJobData) {
         console.log(`[UPDATE] Looking for job in cache with ID: ${cleanId}`);
         console.log(`[UPDATE] Original ID from request: ${id}`);
+        
+        // Log all jobs_ cache keys for debugging
+        const allJobKeys = Array.from(serverCache.keys()).filter(k => k.startsWith('jobs_'));
+        console.log(`[UPDATE] All jobs_ cache keys (${allJobKeys.length}):`, allJobKeys.slice(0, 10));
+        
         const escapeDot = (s: string) => s.replace(/\./g, '%2E');
         const alt1 = `jobs_${cleanId}`;
         const alt2 = `jobs_${escapeDot(encodeURIComponent('/' + cleanId))}`;
