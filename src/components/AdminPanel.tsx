@@ -25,6 +25,7 @@ export function AdminPanel() {
   
   // Editing state
   const [editingJob, setEditingJob] = useState<any>(null);
+  const [editingJobId, setEditingJobId] = useState<string>(''); // Store original ID
   const [editContent, setEditContent] = useState('');
   const [previewMode, setPreviewMode] = useState(false);
   
@@ -143,6 +144,7 @@ export function AdminPanel() {
       const res = await authFetch(`/api/admin/job?id=${encodeURIComponent(id)}`);
       const data = await res.json();
       if (data.success) {
+        setEditingJobId(id); // Store original ID
         setEditingJob(data.job);
         setEditContent(data.job.content);
         setPreviewMode(false);
@@ -161,11 +163,12 @@ export function AdminPanel() {
     try {
       setLoading(true);
       setError('');
-      console.log('[SAVE] Attempting to save job:', editingJob.id);
-      // Use PUT body to send ID
+      console.log('[SAVE] Attempting to save job:', editingJobId);
+      console.log('[SAVE] Using original ID from list:', editingJobId);
+      // Use PUT body to send ID - use original ID from list, not from server response
       const res = await authFetch(`/api/admin/job`, {
         method: 'PUT',
-        body: JSON.stringify({ id: editingJob.id, content: editContent, title: editingJob.title, path: editingJob.path })
+        body: JSON.stringify({ id: editingJobId, content: editContent, title: editingJob.title, path: editingJob.path })
       });
       console.log('[SAVE] Response status:', res.status);
       const data = await res.json();
@@ -173,6 +176,7 @@ export function AdminPanel() {
       if (data.success) {
         alert(data.message || "Saved successfully!");
         setEditingJob(null);
+        setEditingJobId('');
         fetchJobs(); // Refresh list after save
       } else {
         alert(data.error || "Save failed. Please try again.");
