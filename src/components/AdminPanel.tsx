@@ -7,6 +7,7 @@ interface Job {
   title: string;
   path: string;
   updatedAt: string;
+  category?: string;
 }
 
 export function AdminPanel() {
@@ -27,7 +28,19 @@ export function AdminPanel() {
   const [editingJob, setEditingJob] = useState<any>(null);
   const [editingJobId, setEditingJobId] = useState<string>(''); // Store original ID
   const [editContent, setEditContent] = useState('');
+  const [editCategory, setEditCategory] = useState('');
   const [previewMode, setPreviewMode] = useState(false);
+  
+  const categoryOptions = [
+    { value: 'latest-job', label: 'Latest Jobs' },
+    { value: 'result', label: 'Result' },
+    { value: 'admit-card', label: 'Admit Card' },
+    { value: 'answer-key', label: 'Answer Key' },
+    { value: 'syllabus', label: 'Syllabus' },
+    { value: 'admission', label: 'Admission' },
+    { value: 'calendar', label: 'Calendar' },
+    { value: 'documents', label: 'Documents' }
+  ];
   
   // Add new job state
   const [showAddJobForm, setShowAddJobForm] = useState(false);
@@ -147,6 +160,7 @@ export function AdminPanel() {
         setEditingJobId(id); // Store original ID
         setEditingJob(data.job);
         setEditContent(data.job.content);
+        setEditCategory(data.job.category || 'latest-job');
         setPreviewMode(false);
       } else {
         alert(data.error);
@@ -168,7 +182,7 @@ export function AdminPanel() {
       // Use PUT body to send ID - use original ID from list, not from server response
       const res = await authFetch(`/api/admin/job`, {
         method: 'PUT',
-        body: JSON.stringify({ id: editingJobId, content: editContent, title: editingJob.title, path: editingJob.path })
+        body: JSON.stringify({ id: editingJobId, content: editContent, title: editingJob.title, path: editingJob.path, category: editCategory })
       });
       console.log('[SAVE] Response status:', res.status);
       const data = await res.json();
@@ -177,6 +191,7 @@ export function AdminPanel() {
         alert(data.message || "Saved successfully!");
         setEditingJob(null);
         setEditingJobId('');
+        setEditCategory('');
         fetchJobs(); // Refresh list after save
       } else {
         alert(data.error || "Save failed. Please try again.");
@@ -402,9 +417,18 @@ export function AdminPanel() {
                 type="text"
                 value={editingJob.path || ''}
                 onChange={(e) => setEditingJob({...editingJob, path: e.target.value})}
-                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg outline-none text-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-sm"
+                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg outline-none text-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-sm mb-2"
                 placeholder="Job Path/URL"
               />
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value)}
+                className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg outline-none text-gray-700 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium text-sm"
+              >
+                {categoryOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setPreviewMode(!previewMode)} className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 font-medium transition">
@@ -617,13 +641,14 @@ export function AdminPanel() {
               <thead>
                 <tr className="bg-gray-50/80 text-gray-500 text-sm border-b border-gray-100 uppercase tracking-wider">
                   <th className="p-5 font-semibold">Title & Path</th>
+                  <th className="p-5 font-semibold hidden md:table-cell">Category</th>
                   <th className="p-5 font-semibold hidden md:table-cell">Last Updated</th>
                   <th className="p-5 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {currentJobs.length === 0 ? (
-                  <tr><td colSpan={3} className="text-center p-12 text-gray-500">No jobs found matching your criteria.</td></tr>
+                  <tr><td colSpan={4} className="text-center p-12 text-gray-500">No jobs found matching your criteria.</td></tr>
                 ) : (
                   currentJobs.map((job) => (
                     <tr key={job.id} className="hover:bg-blue-50/30 transition-colors group">
@@ -631,6 +656,11 @@ export function AdminPanel() {
                         <div className="font-bold text-gray-900 text-sm md:text-base mb-1">{job.title}</div>
                         <div className="text-xs font-mono text-gray-500 bg-gray-100 inline-block px-2 py-1 rounded truncate max-w-[200px] md:max-w-md mb-1">{job.path}</div>
                         <a href={job.path} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 hover:underline">View Post →</a>
+                      </td>
+                      <td className="p-5 hidden md:table-cell text-sm text-gray-600">
+                        <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                          {job.category || 'latest-job'}
+                        </span>
                       </td>
                       <td className="p-5 hidden md:table-cell text-sm text-gray-600">
                         <div className="font-medium">{new Date(job.updatedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</div>

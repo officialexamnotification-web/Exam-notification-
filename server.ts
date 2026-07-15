@@ -2802,7 +2802,7 @@ async function startServer() {
   // Update a job content manually
   app.put("/api/admin/job", verifyAdmin, async (req, res): Promise<any> => {
     try {
-      const { id, content, title, path } = req.body;
+      const { id, content, title, path, category } = req.body;
       if (!id) return res.status(400).json({ success: false, error: "ID required" });
       
       let decodedId = id;
@@ -2874,6 +2874,9 @@ async function startServer() {
       };
       if (path) {
         updateData.path = path;
+      }
+      if (category) {
+        updateData.category = category;
       }
       
       // Try Firestore save (non-blocking - will fall back to cache)
