@@ -1,0 +1,35 @@
+.job-content-view p,
+.job-content-view div:not(.cta-injected-blue-box):not(.short-info-box):not(.flex):not(.flex-1),
+.job-content-view span:not([class]),
+.job-content-view li {
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+}
+
+.job-content-view h1,
+.job-content-view h2 {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.job-content-view h3 {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  margin-top: 1.25rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.job-content-view h4,
+.job-content-view h5,
+.job-content-view h6 {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.job-content-view * {
+  font-family: var(--font-sans) !important;
+}
