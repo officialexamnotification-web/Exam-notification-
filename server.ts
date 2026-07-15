@@ -1425,10 +1425,8 @@ async function startServer() {
               let trueCat = determineJobCategory(job.title, job.url || job.path);
               let bucketKey = getBucketForCat(trueCat) || getBucketForCat('latest-job');
               if (bucketKey && categoryMap.has(bucketKey)) {
-                  // Limit to top 30 items per category to maintain fast homepage load times
-                  if (categoryMap.get(bucketKey)!.length < 30) {
-                      categoryMap.get(bucketKey)!.push(job);
-                  }
+                  // Show all items per category (removed limit)
+                  categoryMap.get(bucketKey)!.push(job);
               }
           });
           
