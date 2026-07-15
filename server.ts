@@ -298,20 +298,20 @@ try {
 
 let lastWriteTime = 0;
 
-// ALWAYS load the database from the categorized data/ files
+// ALWAYS load the database from govexam_db.json only
 const loadGovExamDb = () => {
   try {
-    const DATA_DIR = path.join(process.cwd(), 'data');
+    const DB_FILE = path.join(process.cwd(), 'govexam_db.json');
     
     const CATEGORY_MAP = [
-      { id: 'result', title: 'Result', file: 'result.json' },
-      { id: 'admit-card', title: 'Admit Card', file: 'admit_card.json' },
-      { id: 'latest-job', title: 'Latest Jobs', file: 'latest_jobs.json' },
-      { id: 'answer-key', title: 'Answer Key', file: 'answer_key.json' },
-      { id: 'syllabus', title: 'Syllabus', file: 'syllabus.json' },
-      { id: 'admission', title: 'Admission', file: 'admission.json' },
-      { id: 'calendar', title: 'Calendar', file: 'calendar.json' },
-      { id: 'documents', title: 'Documents', file: 'documents.json' },
+      { id: 'result', title: 'Result' },
+      { id: 'admit-card', title: 'Admit Card' },
+      { id: 'latest-job', title: 'Latest Jobs' },
+      { id: 'answer-key', title: 'Answer Key' },
+      { id: 'syllabus', title: 'Syllabus' },
+      { id: 'admission', title: 'Admission' },
+      { id: 'calendar', title: 'Calendar' },
+      { id: 'documents', title: 'Documents' },
     ];
 
     let allDbData: any[] = [];
@@ -320,53 +320,67 @@ const loadGovExamDb = () => {
       trending: []
     };
 
-    if (fs.existsSync(DATA_DIR)) {
-      console.log(`[GOVEXAM_DB] Loading categorized files from ${DATA_DIR}`);
+    if (fs.existsSync(DB_FILE)) {
+      console.log(`[GOVEXAM_DB] Loading database from ${DB_FILE}`);
       
-      for (const cat of CATEGORY_MAP) {
-        const filePath = path.join(DATA_DIR, cat.file);
-        let catLinks = [];
+      try {
+        const dbData = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
+        allDbData = dbData;
+        console.log(`[GOVEXAM_DB] Loaded ${dbData.length} total jobs from govexam_db.json`);
         
-        if (fs.existsSync(filePath)) {
-          try {
-            const catData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-            allDbData.push(...catData);
-            
-            // Map the detailed job to a link for the homepage
-            catLinks = catData.map((job: any) => ({
-              id: job.id || `scraped-${Math.random().toString(36).substring(7)}`,
-              title: job.title,
-              url: job.path || job.url,
-              path: job.path || job.url,
-              postDate: new Date().toISOString().split('T')[0],
-              createdAt: job.scrapedAt || new Date().toISOString(),
-              updatedAt: job.scrapedAt || new Date().toISOString(),
-              isNew: false,
-              isOut: false
-            }));
-            
-            console.log(`[GOVEXAM_DB] Loaded ${catData.length} items from ${cat.file}`);
-          } catch (e) {
-            console.error(`[GOVEXAM_DB] Error reading ${cat.file}:`, e);
-          }
-        }
-        
-        homeDataIndex.data.push({
-          id: cat.id,
-          title: cat.title,
-          links: catLinks
+        // Group jobs by category for homepage
+        const categoryGroups: Record<string, any[]> = {};
+        CATEGORY_MAP.forEach(cat => {
+          categoryGroups[cat.id] = [];
         });
+        
+        dbData.forEach((job: any) => {
+          const jobCat = job.category || 'latest-job';
+          if (categoryGroups[jobCat]) {
+            categoryGroups[jobCat].push(job);
+          }
+        });
+        
+        // Build homepage data from grouped jobs
+        CATEGORY_MAP.forEach(cat => {
+          const catJobs = categoryGroups[cat.id] || [];
+          const catLinks = catJobs.map((job: any) => ({
+            id: job.id || `scraped-${Math.random().toString(36).substring(7)}`,
+            title: job.title,
+            url: job.path || job.url,
+            path: job.path || job.url,
+            postDate: job.postDate || new Date().toISOString().split('T')[0],
+            createdAt: job.createdAt || job.scrapedAt || new Date().toISOString(),
+            updatedAt: job.updatedAt || job.scrapedAt || new Date().toISOString(),
+            isNew: false,
+            isOut: false
+          }));
+          
+          homeDataIndex.data.push({
+            id: cat.id,
+            title: cat.title,
+            links: catLinks
+          });
+          
+          console.log(`[GOVEXAM_DB] Category ${cat.id}: ${catJobs.length} jobs`);
+        });
+        
+      } catch (e) {
+        console.error(`[GOVEXAM_DB] Error reading govexam_db.json:`, e);
       }
-      
-      // Select top 15 jobs across all categories for Trending
-      homeDataIndex.trending = allDbData
+    } else {
+      console.log(`[GOVEXAM_DB] govexam_db.json not found, using empty database`);
+    }
+    
+    // Select top 15 jobs across all categories for Trending
+    homeDataIndex.trending = allDbData
         .slice(0, 15)
         .map((job: any) => ({
           id: job.id || `scraped-${Math.random().toString(36).substring(7)}`,
           title: job.title,
           url: job.path || job.url,
           path: job.path || job.url,
-          postDate: new Date().toISOString().split('T')[0],
+          postDate: job.postDate || new Date().toISOString().split('T')[0],
           createdAt: job.scrapedAt || new Date().toISOString(),
           updatedAt: job.scrapedAt || new Date().toISOString(),
           isNew: false,
@@ -377,11 +391,7 @@ const loadGovExamDb = () => {
       serverCache.set('home_data_index', homeDataIndex);
       cache.set('home_data_index', { data: homeDataIndex, timestamp: Date.now() });
 
-      // Save everything to a single unified govexam_db.json for fallback compatibility
-      const GOVEXAM_DB_FILE = path.join(process.cwd(), 'govexam_db.json');
-      lastWriteTime = Date.now();
-      fs.writeFileSync(GOVEXAM_DB_FILE, JSON.stringify(allDbData, null, 2));
-
+      // Store individual jobs in serverCache for quick access
       for (const job of allDbData) {
         // Ensure chronological and audit fields are correctly populated from scrapedAt
         if (!job.postDate) {
@@ -393,60 +403,21 @@ const loadGovExamDb = () => {
         if (!job.updatedAt) {
           job.updatedAt = job.scrapedAt || new Date().toISOString();
         }
-
-        let pathStr = job.path;
-        if (!pathStr && job.originalUrl) {
-          try {
-            const urlObj = new URL(job.originalUrl);
-            pathStr = urlObj.pathname;
-          } catch (e) {
-            pathStr = job.originalUrl;
-          }
-        }
         
-        if (!pathStr) continue;
-        
-        const cleanId = pathStr.replace(/^\/+|\/+$/g, '');
-        if (!cleanId) continue;
-        
-        const escapeDot = (s: string) => s.replace(/\./g, '%2E');
-        const aliases = [
-          `jobs_${cleanId}`,
-          `jobs_${escapeDot(encodeURIComponent('/' + cleanId))}`,
-          `jobs_${escapeDot(encodeURIComponent('/' + cleanId + '/'))}`
-        ];
-        for (const aliasKey of aliases) {
-          serverCache.set(aliasKey, job);
-          cache.set(aliasKey, { data: job, timestamp: Date.now() });
-        }
+        const cleanId = (job.path || job.url || job.id).replace(/^\/|\/$/g, '').replace(/\//g, '-');
+        serverCache.set(`jobs_${cleanId}`, job);
       }
-      console.log(`[GOVEXAM_DB] Connected database and updated serverCache. Items: ${serverCache.size}`);
+
+      console.log(`[GOVEXAM_DB] Loaded ${allDbData.length} jobs into serverCache`);
+      return { allDbData, homeDataIndex };
+    } catch (e) {
+      console.error('[GOVEXAM_DB] Error loading database:', e);
+      return { allDbData: [], homeDataIndex: { data: [], trending: [] } };
     }
-  } catch (e) {
-    console.log('[GOVEXAM_DB] Error connecting local DB:', e);
-  }
 };
 
 // Initial load on startup
 loadGovExamDb();
-
-// Set up file watcher to automatically reload when modified by an external process or AI sync
-try {
-  const GOVEXAM_DB_FILE = path.join(process.cwd(), 'govexam_db.json');
-  if (fs.existsSync(GOVEXAM_DB_FILE)) {
-    fs.watch(GOVEXAM_DB_FILE, (eventType) => {
-      if (eventType === 'change') {
-        const timeSinceLastWrite = Date.now() - lastWriteTime;
-        if (timeSinceLastWrite > 3000) { // Only reload if modified by an external process/AI (over 3s after last write)
-          console.log('[GOVEXAM_DB] File modified externally. Reloading database...');
-          loadGovExamDb();
-        }
-      }
-    });
-  }
-} catch (watchErr) {
-  console.error('[GOVEXAM_DB] Failed to set up file watch:', watchErr);
-}
 
 // Save cache to file
 const saveCache = () => {
