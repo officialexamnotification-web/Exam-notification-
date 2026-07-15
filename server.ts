@@ -2857,17 +2857,23 @@ async function startServer() {
       
       // Fallback: check cache with cleanId and alternate aliases
       if (!existingJobData) {
+        console.log(`[UPDATE] Looking for job in cache with ID: ${cleanId}`);
+        console.log(`[UPDATE] Original ID from request: ${id}`);
         const escapeDot = (s: string) => s.replace(/\./g, '%2E');
         const alt1 = `jobs_${cleanId}`;
         const alt2 = `jobs_${escapeDot(encodeURIComponent('/' + cleanId))}`;
         const alt3 = `jobs_${escapeDot(encodeURIComponent('/' + cleanId + '/'))}`;
         const alt4 = `jobs_${id}`;
         
+        console.log(`[UPDATE] Trying cache keys: ${alt1}, ${alt2}, ${alt3}, ${alt4}`);
+        
         let cachedJob = null;
         if (serverCache.has(alt1)) cachedJob = serverCache.get(alt1);
         else if (serverCache.has(alt2)) cachedJob = serverCache.get(alt2);
         else if (serverCache.has(alt3)) cachedJob = serverCache.get(alt3);
         else if (serverCache.has(alt4)) cachedJob = serverCache.get(alt4);
+        
+        console.log(`[UPDATE] Cached job found: ${cachedJob ? 'YES' : 'NO'}`);
         
         if (cachedJob) {
           existingJobData = cachedJob.data || cachedJob;
