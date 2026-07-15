@@ -73,6 +73,8 @@ export function AdminPanel() {
   };
 
   const authFetch = async (url: string, options: any = {}) => {
+    console.log('[AUTH FETCH] Request:', url, options.method || 'GET');
+    console.log('[AUTH FETCH] Admin key present:', !!adminKey);
     const headers: any = {
       'x-admin-key': adminKey,
       ...(options.headers || {})
@@ -85,6 +87,7 @@ export function AdminPanel() {
       ...options,
       headers
     });
+    console.log('[AUTH FETCH] Response status:', res.status);
     if (res.status === 403) {
       handleLogout();
       throw new Error("Invalid Admin Key. Please login again.");
