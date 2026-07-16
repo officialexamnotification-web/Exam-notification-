@@ -1705,7 +1705,7 @@ async function startServer() {
           targetPath.startsWith('/calendar') ||
           targetPath.startsWith('/documents')
       ) {
-          // Serve Category Page from Firestore
+          // Serve Category Page from Local Database Only
           try {
               let categoryId = '';
               if (targetPath.includes('latest-job')) categoryId = 'latest-job';
@@ -1720,7 +1720,8 @@ async function startServer() {
               if (categoryId) {
                   let data: any = null;
                   
-                  if (!data && serverCache.has(`category_pages_${categoryId}`)) {
+                  // First check serverCache
+                  if (serverCache.has(`category_pages_${categoryId}`)) {
                       data = serverCache.get(`category_pages_${categoryId}`);
                       
                       // Sort cached data by newest first
@@ -1746,163 +1747,104 @@ async function startServer() {
                       }
                   }
                   
-                  if (db && !data) {
-                      try {
-                          const catDocRef = doc(db, 'category_pages', categoryId);
-                          const catDoc = await getDoc(catDocRef);
-                      if (catDoc.exists()) {
-                          data = catDoc.data();
+                  // If not in cache, build from govexam_db.json data
+                  if (!data || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
+                      const fallbackLinks: any[] = [];
+                      const seenPaths = new Set<string>(); // Deduplication by path
+                      
+                      // Scan serverCache jobs (loaded from govexam_db.json)
+                      for (const [key, val] of serverCache.entries()) {
+                          if (key.startsWith('jobs_')) {
+                              const job = val;
+                              let jobCat = job.category || '';
+                              if (jobCat === 'latest-jobs') jobCat = 'latest-job';
+                              
+                              let targetCat = categoryId;
+                              if (targetCat === 'latest-jobs') targetCat = 'latest-job';
+
+                              // If category not stored, detect from title/path
+                               if (!jobCat) {
+                                   jobCat = determineJobCategory(job.title || '', job.path || '');
+                               }
+
+                              const jobPath = job.path || job.url;
+                              // Skip if already seen (deduplication)
+                              if (seenPaths.has(jobPath)) continue;
+                              
+                              if (job && (jobCat === targetCat || (targetCat === 'admit-card' && (jobCat === 'admit-card' || jobCat === 'admit card')))) {
+                                  seenPaths.add(jobPath); // Mark as seen
+                                  fallbackLinks.push({
+                                      id: job.id || job.path,
+                                      title: job.title,
+                                      url: job.path,
+                                      path: job.path,
+                                      category: jobCat,
+                                      postDate: job.postDate,
+                                      createdAt: job.createdAt,
+                                      updatedAt: job.updatedAt
+                                  });
+                              }
+                          }
+                      }
+                      
+                      // Sort by newest first using prioritized date logic
+                      fallbackLinks.sort((a, b) => {
+                          const getPriorityTime = (j: any) => {
+                              if (j.postDate) {
+                                  const t = new Date(j.postDate).getTime();
+                                  if (!isNaN(t)) return t;
+                              }
+                              if (j.createdAt) {
+                                  const t = new Date(j.createdAt).getTime();
+                                  if (!isNaN(t)) return t;
+                              }
+                              if (j.updatedAt) {
+                                  const t = new Date(j.updatedAt).getTime();
+                                  if (!isNaN(t)) return t;
+                              }
+                              return 0;
+                          };
+                          return getPriorityTime(b) - getPriorityTime(a);
+                      });
+
+                      if (fallbackLinks.length > 0) {
+                          const prettyTitle = categoryId === 'latest-job' ? 'Latest Jobs' :
+                                               categoryId === 'result' ? 'Results' :
+                                               categoryId === 'admit-card' ? 'Admit Cards' :
+                                               categoryId === 'answer-key' ? 'Answer Keys' :
+                                               categoryId === 'syllabus' ? 'Syllabus' :
+                                               categoryId === 'admission' ? 'Admissions' : categoryId;
+                          data = {
+                              title: prettyTitle,
+                              data: fallbackLinks
+                          };
                           
-                          // Add OUT and NEW tag logic for category page links 
-                           if (data.data && Array.isArray(data.data)) {
-                               // Sort links by newest first
-                               data.data.sort((a: any, b: any) => {
-                                   const getPriorityTime = (j: any) => {
-                                       if (j.postDate) {
-                                           const t = new Date(j.postDate).getTime();
-                                           if (!isNaN(t)) return t;
-                                       }
-                                       if (j.createdAt) {
-                                           const t = new Date(j.createdAt).getTime();
-                                           if (!isNaN(t)) return t;
-                                       }
-                                       if (j.updatedAt) {
-                                           const t = new Date(j.updatedAt).getTime();
-                                           if (!isNaN(t)) return t;
-                                       }
-                                       return 0;
-                                   };
-                                   return getPriorityTime(b) - getPriorityTime(a);
-                               });
-                               
-                               data.data = applyHomepageTags(data.data, categoryId);
-                           }
-                           
-                           serverCache.set(`category_pages_${categoryId}`, data);
-                           cache.set(`category_pages_${categoryId}`, { data, timestamp: Date.now() });
-                           saveCache();
-                       }
-                   } catch (e: any) {
-                       console.error(`Category doc fetch failed for ${categoryId}:`, e.message);
-                   }
-                  } 
-
-                  if (!data && cache.has(`category_pages_${categoryId}`)) {
-                       const cached = cache.get(`category_pages_${categoryId}`);
-                       if (Date.now() - cached.timestamp < CACHE_DURATION_MS) {
-                           data = cached.data;
-                       }
-                   }
-
-                   // Dynamic Fallback: Scan serverCache/Firestore jobs and construct list if empty
-                   if (!data || !data.data || !Array.isArray(data.data) || data.data.length === 0) {
-                       const fallbackLinks: any[] = [];
-                       const seenPaths = new Set<string>(); // Deduplication by path
-                       
-                       for (const [key, val] of serverCache.entries()) {
-                           if (key.startsWith('jobs_')) {
-                               const job = val;
-                               let jobCat = job.category || '';
-                               if (jobCat === 'latest-jobs') jobCat = 'latest-job';
-                               
-                               let targetCat = categoryId;
-                               if (targetCat === 'latest-jobs') targetCat = 'latest-job';
-
-                               // If category not stored, detect from title/path
-                                if (!jobCat) {
-                                    jobCat = determineJobCategory(job.title || '', job.path || '');
-                                }
-
-                               const jobPath = job.path || job.url;
-                               // Skip if already seen (deduplication)
-                               if (seenPaths.has(jobPath)) continue;
-                               
-                               if (job && (jobCat === targetCat || (targetCat === 'admit-card' && (jobCat === 'admit-card' || jobCat === 'admit card')))) {
-                                   seenPaths.add(jobPath); // Mark as seen
-                                   fallbackLinks.push({
-                                       id: job.id || job.path,
-                                       title: job.title,
-                                       url: job.path,
-                                       path: job.path,
-                                       category: jobCat,
-                                       postDate: job.postDate,
-                                       createdAt: job.createdAt,
-                                       updatedAt: job.updatedAt
-                                   });
-                               }
-                           }
-                       }
-                       
-                       // Sort by newest first using prioritized date logic
-                       fallbackLinks.sort((a, b) => {
-                           const getPriorityTime = (j: any) => {
-                               if (j.postDate) {
-                                   const t = new Date(j.postDate).getTime();
-                                   if (!isNaN(t)) return t;
-                               }
-                               if (j.createdAt) {
-                                   const t = new Date(j.createdAt).getTime();
-                                   if (!isNaN(t)) return t;
-                               }
-                               if (j.updatedAt) {
-                                   const t = new Date(j.updatedAt).getTime();
-                                   if (!isNaN(t)) return t;
-                               }
-                               return 0;
-                           };
-                           return getPriorityTime(b) - getPriorityTime(a);
-                       });
-
-                       if (fallbackLinks.length > 0) {
-                           const prettyTitle = categoryId === 'latest-job' ? 'Latest Jobs' :
-                                                categoryId === 'result' ? 'Results' :
-                                                categoryId === 'admit-card' ? 'Admit Cards' :
-                                                categoryId === 'answer-key' ? 'Answer Keys' :
-                                                categoryId === 'syllabus' ? 'Syllabus' :
-                                                categoryId === 'admission' ? 'Admissions' : categoryId;
-                           data = {
-                               title: prettyTitle,
-                               data: fallbackLinks
-                           };
-                       }
-                   }
-                   
-                   if (data) {
-                       return res.json({
-                           success: true,
-                           isHome: true, // Reuse the search layout in frontend
-                           title: data.title,
-                           data: [
-                               {
-                                   id: 'category-results',
-                                   title: data.title,
-                                   links: maskSequence(applyHomepageTags(data.data || data.links || [], categoryId)),
-                                   viewAllUrl: targetPath
-                               }
-                           ],
-                           trending: []
-                       });
-                   }
-
-                  // Fallback if not found in db or not matching explicitly
-                  console.log(`[INFO] Category ${categoryId} not found in DB.`);
+                          // Cache the built data
+                          serverCache.set(`category_pages_${categoryId}`, data);
+                          cache.set(`category_pages_${categoryId}`, { data, timestamp: Date.now() });
+                          saveCache();
+                      }
+                  }
                   
                   if (data) {
                       return res.json({
                           success: true,
-                          isHome: true,
+                          isHome: true, // Reuse the search layout in frontend
                           title: data.title,
                           data: [
                               {
                                   id: 'category-results',
                                   title: data.title,
-                                  links: maskSequence(data.data || data.links || []),
+                                  links: maskSequence(applyHomepageTags(data.data || data.links || [], categoryId)),
                                   viewAllUrl: targetPath
                               }
                           ],
                           trending: []
                       });
                   }
+
+                  // Fallback if not found in local database
+                  console.log(`[INFO] Category ${categoryId} not found in local database.`);
                   
                   return res.status(404).json({ success: false, error: 'Category data not found or still syncing. Please check back later.' });
               }
@@ -2275,26 +2217,7 @@ async function startServer() {
               }
           }
 
-          // 3. Fallback to Firestore network call only if completely missing from memory cache
-          if (db && !data) {
-              for (const p of jobPaths) {
-                  const jobId = encodeURIComponent(p).replace(/\./g, '%2E');
-                  try {
-                      const jobDocRef = doc(db, 'jobs', jobId);
-                      const jobDoc = await getDoc(jobDocRef);
-                      if (jobDoc.exists()) {
-                          data = jobDoc.data();
-                          foundJobId = jobId;
-                          syncJobToCacheAndAliases(jobId, data);
-                          saveCache();
-                          console.log(`[PAGE_LOAD] Firestore fallback loaded and synced for: ${targetPath}`);
-                          break;
-                      }
-                  } catch (e: any) {
-                      console.error(`Job fetch error for ${jobId}:`, e.message);
-                  }
-              }
-          }
+          // 3. Firebase fallback removed - using local database only
           
           if (!data) {
               console.log(`[INFO] Job post not found in DB: ${targetPath}`);
@@ -2655,26 +2578,8 @@ async function startServer() {
       const cleanId = decodedId.replace(/^\/+|\/+$/g, '');
       
       let jobData: any = null;
-      let firestoreAvailable = false;
-      if (db) {
-        const result = await safeFirestoreOp(async () => {
-          const jobDocRef = doc(db, 'jobs', cleanId);
-          const jobDoc = await getDoc(jobDocRef);
-          if (jobDoc.exists()) {
-            const data = jobDoc.data();
-            await deleteDoc(jobDocRef);
-            return data;
-          }
-          return null;
-        }, null, `admin/job delete ${cleanId}`);
-        
-        if (result.success && result.value) {
-          firestoreAvailable = true;
-          jobData = result.value;
-        }
-      }
       
-      // Fallback: check cache with cleanId and alternate aliases
+      // Check cache with cleanId and alternate aliases (Local Only)
       if (!jobData) {
         const escapeDot = (s: string) => s.replace(/\./g, '%2E');
         const alt1 = `jobs_${cleanId}`;
@@ -2734,21 +2639,9 @@ async function startServer() {
         }
       }
       
-      // Clean up homepage references
+      // Clean up homepage references (Local Only)
       try {
-        let homeData: any = null;
-        if (db && firestoreAvailable) {
-          const homeResult = await safeFirestoreOp(async () => {
-            const homeDocRef = doc(db, 'home_data', 'index');
-            const homeDoc = await getDoc(homeDocRef);
-            if (homeDoc.exists()) return homeDoc.data();
-            return null;
-          }, null, 'delete cleanup home_data read');
-          if (homeResult.success) homeData = homeResult.value;
-        }
-        if (!homeData) {
-          homeData = serverCache.get('home_data_index');
-        }
+        let homeData: any = serverCache.get('home_data_index');
         
         if (homeData) {
           let changed = false;
@@ -2775,12 +2668,6 @@ async function startServer() {
             if (homeData.trending.length !== before) changed = true;
           }
           if (changed) {
-            if (db && firestoreAvailable) {
-              await safeFirestoreOp(async () => {
-                const homeDocRef = doc(db, 'home_data', 'index');
-                await setDoc(homeDocRef, homeData);
-              }, undefined, 'delete cleanup home_data write');
-            }
             serverCache.set('home_data_index', homeData);
             cache.set('home_data_index', { data: homeData, timestamp: Date.now() });
             console.log(`[DELETE] Cleaned up homepage references for: ${jobPath}`);
@@ -2792,7 +2679,7 @@ async function startServer() {
       
       saveCache();
       console.log(`[DELETE] Successfully deleted job: ${cleanId}`);
-      res.json({ success: true, message: "Job deleted successfully" + (!firestoreAvailable ? " (saved to cache)" : "") });
+      res.json({ success: true, message: "Job deleted successfully" });
     } catch (error: any) {
       console.error(`[DELETE ERROR] ${error.message}`);
       res.status(500).json({ success: false, error: "Failed to delete job. Please try again." });
@@ -2879,13 +2766,7 @@ async function startServer() {
         updateData.category = category;
       }
       
-      // Try Firestore save (non-blocking - will fall back to cache)
-      if (db && firestoreAvailable) {
-        await safeFirestoreOp(async () => {
-          const jobDocRef = doc(db, 'jobs', cleanId);
-          await setDoc(jobDocRef, updateData, { merge: true });
-        }, undefined, `admin/job update save ${cleanId}`);
-      }
+      // Firebase save removed - using local cache only
       
       // Always update cache for all matching aliases
       const escapeDot = (s: string) => s.replace(/\./g, '%2E');
@@ -2915,20 +2796,8 @@ async function startServer() {
               return linkUrl.includes(encodedPathStr) || linkUrl.includes(jobPath);
           };
 
-          // 1. Update Home Data
-          let homeData: any = null;
-          if (db && firestoreAvailable) {
-              const homeResult = await safeFirestoreOp(async () => {
-                  const homeDocRef = doc(db, 'home_data', 'index');
-                  const homeDoc = await getDoc(homeDocRef);
-                  if (homeDoc.exists()) return homeDoc.data();
-                  return null;
-              }, null, 'sync home_data read');
-              if (homeResult.success) homeData = homeResult.value;
-          }
-          if (!homeData) {
-              homeData = serverCache.get('home_data_index');
-          }
+          // 1. Update Home Data (Local Only)
+          let homeData: any = serverCache.get('home_data_index');
           
           if (homeData) {
               let updatedHome = false;
@@ -2953,85 +2822,30 @@ async function startServer() {
                   });
               }
               if (updatedHome) {
-                  if (db && firestoreAvailable) {
-                      await safeFirestoreOp(async () => {
-                          const homeDocRef = doc(db, 'home_data', 'index');
-                          await setDoc(homeDocRef, homeData);
-                      }, undefined, 'sync home_data write');
-                  }
                   serverCache.set('home_data_index', homeData);
                   cache.set('home_data_index', { data: homeData, timestamp: Date.now() });
                   console.log(`[SYNC] Updated job title in home_data/index`);
               }
           }
           
-          // 2. Update Category Pages
-          if (db && firestoreAvailable) {
-              const catResult = await safeFirestoreOp(async () => {
-                  const catDocs = await getDocs(collection(db, 'category_pages'));
-                  for (const catDoc of catDocs.docs) {
-                      const catData = catDoc.data();
-                      let updatedCat = false;
-                      if (Array.isArray(catData.data)) {
-                          catData.data.forEach((link: any) => {
-                              if (matchesPath(link.url) && link.title !== title) {
-                                  link.title = title;
-                                  updatedCat = true;
-                              }
-                          });
-                      }
-                      if (updatedCat) {
-                          await setDoc(catDoc.ref, catData);
-                          serverCache.set(`category_pages_${catDoc.id}`, catData);
-                          cache.set(`category_pages_${catDoc.id}`, { data: catData, timestamp: Date.now() });
-                          console.log(`[SYNC] Updated job title in category_pages/${catDoc.id}`);
-                      }
-                  }
-              }, undefined, 'sync category_pages');
-              
-              if (!catResult.success) {
-                  // Fall back to cache-only category sync
-                  const categories = ['latest-job', 'result', 'admit-card', 'answer-key', 'syllabus', 'admission'];
-                  for (const categoryId of categories) {
-                      let catData = serverCache.get(`category_pages_${categoryId}`);
-                      if (catData) {
-                          let updatedCat = false;
-                          if (Array.isArray(catData.data)) {
-                              catData.data.forEach((link: any) => {
-                                  if (matchesPath(link.url) && link.title !== title) {
-                                      link.title = title;
-                                      updatedCat = true;
-                                  }
-                              });
+          // 2. Update Category Pages (Local Only)
+          const categories = ['latest-job', 'result', 'admit-card', 'answer-key', 'syllabus', 'admission'];
+          for (const categoryId of categories) {
+              let catData = serverCache.get(`category_pages_${categoryId}`);
+              if (catData) {
+                  let updatedCat = false;
+                  if (Array.isArray(catData.data)) {
+                      catData.data.forEach((link: any) => {
+                          if (matchesPath(link.url) && link.title !== title) {
+                              link.title = title;
+                              updatedCat = true;
                           }
-                          if (updatedCat) {
-                              serverCache.set(`category_pages_${categoryId}`, catData);
-                              cache.set(`category_pages_${categoryId}`, { data: catData, timestamp: Date.now() });
-                              console.log(`[SYNC] Updated job title in cached category_pages/${categoryId}`);
-                          }
-                      }
+                      });
                   }
-              }
-          } else {
-              // Cache-only category page sync
-              const categories = ['latest-job', 'result', 'admit-card', 'answer-key', 'syllabus', 'admission'];
-              for (const categoryId of categories) {
-                  let catData = serverCache.get(`category_pages_${categoryId}`);
-                  if (catData) {
-                      let updatedCat = false;
-                      if (Array.isArray(catData.data)) {
-                          catData.data.forEach((link: any) => {
-                              if (matchesPath(link.url) && link.title !== title) {
-                                  link.title = title;
-                                  updatedCat = true;
-                              }
-                          });
-                      }
-                      if (updatedCat) {
-                          serverCache.set(`category_pages_${categoryId}`, catData);
-                          cache.set(`category_pages_${categoryId}`, { data: catData, timestamp: Date.now() });
-                          console.log(`[SYNC] Updated job title in cached category_pages/${categoryId}`);
-                      }
+                  if (updatedCat) {
+                      serverCache.set(`category_pages_${categoryId}`, catData);
+                      cache.set(`category_pages_${categoryId}`, { data: catData, timestamp: Date.now() });
+                      console.log(`[SYNC] Updated job title in cached category_pages/${categoryId}`);
                   }
               }
           }
@@ -3118,19 +2932,7 @@ async function startServer() {
       
       // ADD TO HOMEPAGE (TARGET CATEGORY & TRENDING)
       try {
-          let homeData: any = null;
-          if (db && firestoreAvailable) {
-              const homeResult = await safeFirestoreOp(async () => {
-                  const homeDocRef = doc(db, 'home_data', 'index');
-                  const homeDoc = await getDoc(homeDocRef);
-                  if (homeDoc.exists()) return homeDoc.data();
-                  return null;
-              }, null, 'create job home_data read');
-              if (homeResult.success) homeData = homeResult.value;
-          }
-          if (!homeData) {
-              homeData = serverCache.get('home_data_index');
-          }
+          let homeData: any = serverCache.get('home_data_index');
           
           if (homeData) {
               const newLinkObj = {
@@ -3176,30 +2978,13 @@ async function startServer() {
                   }
               }
               
-              if (db && firestoreAvailable) {
-                  await safeFirestoreOp(async () => {
-                      const homeDocRef = doc(db, 'home_data', 'index');
-                      await setDoc(homeDocRef, homeData);
-                  }, undefined, 'create job home_data write');
-              }
+              // Firebase write removed - using local cache only
               serverCache.set('home_data_index', homeData);
               cache.set('home_data_index', { data: homeData, timestamp: Date.now() });
               console.log(`[CREATE JOB] Added to Homepage ${targetCategoryTitle} & Trending Marquee`);
               
-              // 3. Add to Category Page
+              // 3. Add to Category Page (Local Only)
               let catData = serverCache.get(`category_pages_${targetCategory}`);
-              if (!catData && db && firestoreAvailable) {
-                  const catResult = await safeFirestoreOp(async () => {
-                      const catDocRef = doc(db, 'category_pages', targetCategory);
-                      const catDoc = await getDoc(catDocRef);
-                      if (catDoc.exists()) return catDoc.data();
-                      return null;
-                  }, null, 'create job category_page read');
-                  if (catResult.success && catResult.value) {
-                      catData = catResult.value;
-                  }
-              }
-              
               if (!catData) {
                   catData = { data: [] };
               }
@@ -3213,13 +2998,6 @@ async function startServer() {
               
               serverCache.set(`category_pages_${targetCategory}`, catData);
               cache.set(`category_pages_${targetCategory}`, { data: catData, timestamp: Date.now() });
-              
-              if (db && firestoreAvailable) {
-                  await safeFirestoreOp(async () => {
-                      const catDocRef = doc(db, 'category_pages', targetCategory);
-                      await setDoc(catDocRef, catData);
-                  }, undefined, 'create job category_page write');
-              }
           }
       } catch (homeAddErr: any) {
           console.error(`[CREATE JOB] Error adding to homepage: ${homeAddErr.message}`);
@@ -3479,21 +3257,9 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
       // Add to server cache and all aliases
       syncJobToCacheAndAliases(jobId, jobData);
 
-      // ADD TO HOMEPAGE INDEX (Trending & Categories)
+      // ADD TO HOMEPAGE INDEX (Trending & Categories) - Local Only
       try {
-        let homeData: any = null;
-        if (db && firestoreAvailable) {
-          const homeResult = await safeFirestoreOp(async () => {
-            const homeDocRef = doc(db, 'home_data', 'index');
-            const homeDoc = await getDoc(homeDocRef);
-            if (homeDoc.exists()) return homeDoc.data();
-            return null;
-          }, null, 'auto-scrape home_data read');
-          if (homeResult.success) homeData = homeResult.value;
-        }
-        if (!homeData) {
-          homeData = serverCache.get('home_data_index');
-        }
+        let homeData: any = serverCache.get('home_data_index');
 
         if (homeData) {
           const newLinkObj = {
@@ -3539,12 +3305,7 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
             }
           }
 
-          if (db && firestoreAvailable) {
-            await safeFirestoreOp(async () => {
-              const homeDocRef = doc(db, 'home_data', 'index');
-              await setDoc(homeDocRef, homeData);
-            }, undefined, 'auto-scrape home_data write');
-          }
+          // Firebase write removed - using local cache only
           serverCache.set('home_data_index', homeData);
           cache.set('home_data_index', { data: homeData, timestamp: Date.now() });
         }
@@ -3552,7 +3313,7 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
         console.error(`[AUTO-SCRAPE] Failed to update homepage index: ${homeErr.message}`);
       }
 
-      // ADD TO CATEGORY PAGE
+      // ADD TO CATEGORY PAGE (Local Only)
       try {
         const newLinkObj = {
           id: `scrape-${Math.random().toString(36).substring(7)}`,
@@ -3562,18 +3323,6 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
         };
 
         let catData = serverCache.get(`category_pages_${targetCategory}`);
-        if (!catData && db && firestoreAvailable) {
-          const catResult = await safeFirestoreOp(async () => {
-            const catDocRef = doc(db, 'category_pages', targetCategory);
-            const catDoc = await getDoc(catDocRef);
-            if (catDoc.exists()) return catDoc.data();
-            return null;
-          }, null, 'auto-scrape category_page read');
-          if (catResult.success && catResult.value) {
-            catData = catResult.value;
-          }
-        }
-
         if (!catData) {
           catData = { data: [] };
         }
@@ -3587,13 +3336,6 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
 
         serverCache.set(`category_pages_${targetCategory}`, catData);
         cache.set(`category_pages_${targetCategory}`, { data: catData, timestamp: Date.now() });
-
-        if (db && firestoreAvailable) {
-          await safeFirestoreOp(async () => {
-            const catDocRef = doc(db, 'category_pages', targetCategory);
-            await setDoc(catDocRef, catData);
-          }, undefined, 'auto-scrape category_page write');
-        }
       } catch (catErr: any) {
         console.error(`[AUTO-SCRAPE] Failed to update category pages: ${catErr.message}`);
       }
