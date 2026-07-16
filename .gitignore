@@ -8,3 +8,5 @@ coverage/
 !.env.example
 cache.json
 Exam-notification--main/
+govexam_db.json
+govexam_db_backup_*.json
