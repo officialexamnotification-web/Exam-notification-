@@ -2172,6 +2172,7 @@ async function startServer() {
             id: cleanId, // Return normalized clean ID
             title: data.title || 'Untitled Job',
             path: jobPath,
+            category: data.category || determineJobCategory(data.title || '', jobPath),
             updatedAt: data.updatedAt || data.createdAt || data.postDate,
             createdAt: data.createdAt || data.postDate,
             lastCheckedAt: data.lastCheckedAt
