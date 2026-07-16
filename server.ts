@@ -163,8 +163,20 @@ const loadGovExamDb = () => {
             postDate: job.postDate || new Date().toISOString().split('T')[0],
             createdAt: job.createdAt || job.scrapedAt || new Date().toISOString(),
             updatedAt: job.updatedAt || job.scrapedAt || new Date().toISOString(),
-            isNew: false,
-            isOut: false
+            isNew: job.isNew !== undefined ? job.isNew : false,
+            isOut: job.isOut !== undefined ? job.isOut : false,
+            content: job.content || '',
+            manuallyEdited: job.manuallyEdited || false,
+            category: job.category || 'latest-job',
+            department: job.department || '',
+            shortInfo: job.shortInfo || '',
+            importantLinks: job.importantLinks || [],
+            originalUrl: job.originalUrl || job.url,
+            tags: job.tags || [],
+            isHot: job.isHot || false,
+            importantDates: job.importantDates || {},
+            applicationFee: job.applicationFee || {},
+            vacancies: job.vacancies || []
           }));
           
           homeDataIndex.data.push({
@@ -194,8 +206,20 @@ const loadGovExamDb = () => {
           postDate: job.postDate || new Date().toISOString().split('T')[0],
           createdAt: job.scrapedAt || new Date().toISOString(),
           updatedAt: job.scrapedAt || new Date().toISOString(),
-          isNew: false,
-          isOut: false
+          isNew: job.isNew !== undefined ? job.isNew : false,
+          isOut: job.isOut !== undefined ? job.isOut : false,
+          content: job.content || '',
+          manuallyEdited: job.manuallyEdited || false,
+          category: job.category || 'latest-job',
+          department: job.department || '',
+          shortInfo: job.shortInfo || '',
+          importantLinks: job.importantLinks || [],
+          originalUrl: job.originalUrl || job.url,
+          tags: job.tags || [],
+          isHot: job.isHot || false,
+          importantDates: job.importantDates || {},
+          applicationFee: job.applicationFee || {},
+          vacancies: job.vacancies || []
         }));
 
       // Cache the home data
@@ -1128,12 +1152,56 @@ async function startServer() {
               }
           });
           
-          // 4. Update the copiedData with the newly generated links
+          // 4. Update the copiedData with the newly generated links while preserving manual edits
           copiedData.data.forEach((category: any) => {
               if (category && category.id) {
                   let bucketKey = getBucketForCat(category.id);
                   if (bucketKey && categoryMap.has(bucketKey)) {
-                      category.links = categoryMap.get(bucketKey);
+                      const newLinks = categoryMap.get(bucketKey);
+                      const existingLinks = category.links || [];
+                      
+                      // Create a map of existing links by path for quick lookup
+                      const existingLinksMap = new Map();
+                      existingLinks.forEach((link: any) => {
+                          const path = (link.path || link.url || '').trim().toLowerCase().replace(/^\/+|\/+$/g, '');
+                          if (path) existingLinksMap.set(path, link);
+                      });
+                      
+                      // Merge new links with existing links, preserving manual edits
+                      const mergedLinks = newLinks.map((newLink: any) => {
+                          const path = (newLink.path || newLink.url || '').trim().toLowerCase().replace(/^\/+|\/+$/g, '');
+                          const existingLink = existingLinksMap.get(path);
+                          
+                          if (existingLink) {
+                              // Preserve manually edited fields if they are more recent
+                              const existingTime = new Date(existingLink.updatedAt || existingLink.createdAt || 0).getTime();
+                              const newTime = new Date(newLink.updatedAt || newLink.createdAt || 0).getTime();
+                              const isManualEditMoreRecent = existingTime > newTime;
+                              
+                              return {
+                                  ...newLink,
+                                  title: isManualEditMoreRecent ? existingLink.title : newLink.title,
+                                  content: isManualEditMoreRecent ? (existingLink.content || newLink.content) : newLink.content,
+                                  isNew: existingLink.isNew !== undefined ? existingLink.isNew : newLink.isNew,
+                                  isOut: existingLink.isOut !== undefined ? existingLink.isOut : newLink.isOut,
+                                  manuallyEdited: existingLink.manuallyEdited || false,
+                                  category: existingLink.category || newLink.category,
+                                  department: existingLink.department || newLink.department,
+                                  shortInfo: existingLink.shortInfo || newLink.shortInfo,
+                                  importantLinks: existingLink.importantLinks || newLink.importantLinks,
+                                  originalUrl: existingLink.originalUrl || newLink.originalUrl,
+                                  tags: existingLink.tags || newLink.tags,
+                                  isHot: existingLink.isHot !== undefined ? existingLink.isHot : newLink.isHot,
+                                  importantDates: existingLink.importantDates || newLink.importantDates,
+                                  applicationFee: existingLink.applicationFee || newLink.applicationFee,
+                                  vacancies: existingLink.vacancies && existingLink.vacancies.length ? existingLink.vacancies : newLink.vacancies,
+                                  updatedAt: isManualEditMoreRecent ? existingLink.updatedAt : newLink.updatedAt
+                              };
+                          }
+                          return newLink;
+                      });
+                      
+                      category.links = mergedLinks;
                       // prevent double assignment
                       categoryMap.delete(bucketKey); 
                   }
@@ -1148,7 +1216,19 @@ async function startServer() {
               path: job.path,
               postDate: job.postDate,
               createdAt: job.createdAt,
-              updatedAt: job.updatedAt
+              updatedAt: job.updatedAt,
+              content: job.content || '',
+              manuallyEdited: job.manuallyEdited || false,
+              category: job.category,
+              department: job.department || '',
+              shortInfo: job.shortInfo || '',
+              importantLinks: job.importantLinks || [],
+              originalUrl: job.originalUrl || job.url,
+              tags: job.tags || [],
+              isHot: job.isHot || false,
+              importantDates: job.importantDates || {},
+              applicationFee: job.applicationFee || {},
+              vacancies: job.vacancies || []
           }));
           
           return copiedData;
@@ -1513,7 +1593,18 @@ async function startServer() {
                                       category: jobCat,
                                       postDate: job.postDate,
                                       createdAt: job.createdAt,
-                                      updatedAt: job.updatedAt
+                                      updatedAt: job.updatedAt,
+                                      content: job.content || '',
+                                      manuallyEdited: job.manuallyEdited || false,
+                                      department: job.department || '',
+                                      shortInfo: job.shortInfo || '',
+                                      importantLinks: job.importantLinks || [],
+                                      originalUrl: job.originalUrl || job.url,
+                                      tags: job.tags || [],
+                                      isHot: job.isHot || false,
+                                      importantDates: job.importantDates || {},
+                                      applicationFee: job.applicationFee || {},
+                                      vacancies: job.vacancies || []
                                   });
                               }
                           }
@@ -2201,7 +2292,12 @@ async function startServer() {
               id: `manual-${Math.random().toString(36).substring(7)}`,
               title: title,
               url: url,
-              isNew: true
+              isNew: true,
+              manuallyEdited: true,
+              content: '',
+              category: targetCategoryName.toLowerCase().replace(' ', '-'),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
             };
             targetCat.links.unshift(newLink);
             
@@ -2398,7 +2494,8 @@ async function startServer() {
       const updateData: any = { 
         content, 
         title,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        manuallyEdited: true
       };
       if (path) {
         updateData.path = path;
@@ -2446,9 +2543,15 @@ async function startServer() {
                   homeData.data.forEach((cat: any) => {
                       if (Array.isArray(cat.links)) {
                           cat.links.forEach((link: any) => {
-                              if (matchesPath(link.url) && link.title !== title) {
-                                  link.title = title;
-                                  updatedHome = true;
+                              if (matchesPath(link.url)) {
+                                  if (link.title !== title) {
+                                      link.title = title;
+                                      updatedHome = true;
+                                  }
+                                  if (content && link.content !== content) {
+                                      link.content = content;
+                                      updatedHome = true;
+                                  }
                               }
                           });
                       }
@@ -2477,9 +2580,15 @@ async function startServer() {
                   let updatedCat = false;
                   if (Array.isArray(catData.data)) {
                       catData.data.forEach((link: any) => {
-                          if (matchesPath(link.url) && link.title !== title) {
-                              link.title = title;
-                              updatedCat = true;
+                          if (matchesPath(link.url)) {
+                              if (link.title !== title) {
+                                  link.title = title;
+                                  updatedCat = true;
+                              }
+                              if (content && link.content !== content) {
+                                  link.content = content;
+                                  updatedCat = true;
+                              }
                           }
                       });
                   }
@@ -3121,7 +3230,22 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
       });
       
       // 5. Update trending (top 10 overall)
-      newHomeData.trending = allJobs.slice(0, 10).map((job, idx) => ({ ...job, id: `trend-${job.id}-${idx}` }));
+      newHomeData.trending = allJobs.slice(0, 10).map((job, idx) => ({ 
+          ...job, 
+          id: `trend-${job.id}-${idx}`,
+          content: job.content || '',
+          manuallyEdited: job.manuallyEdited || false,
+          category: job.category,
+          department: job.department || '',
+          shortInfo: job.shortInfo || '',
+          importantLinks: job.importantLinks || [],
+          originalUrl: job.originalUrl || job.url,
+          tags: job.tags || [],
+          isHot: job.isHot || false,
+          importantDates: job.importantDates || {},
+          applicationFee: job.applicationFee || {},
+          vacancies: job.vacancies || []
+      }));
       
       // Firebase save removed - using local cache only
       
