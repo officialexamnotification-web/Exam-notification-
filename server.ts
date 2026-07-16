@@ -6,195 +6,11 @@ import multer from 'multer';
 import dotenv from 'dotenv';
 import * as cheerio from 'cheerio';
 import Groq from 'groq-sdk';
-import * as admin from "firebase-admin";
-import { getFirestore as getAdminFirestore } from "firebase-admin/firestore";
 
 // Load environment variables from .env file immediately so they are available for initialization
 dotenv.config();
 
-// Initialize Firebase Admin SDK synchronously
-let adminDb: any = null;
-try {
-  if (!admin.getApps().length) {
-    let credential;
-    const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.FIREBASE_SERVICE_ACCOUNT_KEY || '';
-    let serviceAccount: any = null;
-
-    if (creds) {
-      const trimmed = creds.trim();
-      if (trimmed.startsWith('{')) {
-        try {
-          serviceAccount = JSON.parse(trimmed);
-        } catch (jsonErr: any) {
-          console.warn("[FIREBASE_ADMIN] Tried parsing credentials as JSON but failed:", jsonErr.message);
-        }
-      } else {
-        try {
-          if (fs.existsSync(trimmed)) {
-            const fileContent = fs.readFileSync(trimmed, 'utf8');
-            if (fileContent.trim().startsWith('{')) {
-              serviceAccount = JSON.parse(fileContent);
-            }
-          }
-        } catch (fsErr: any) {
-          console.warn("[FIREBASE_ADMIN] Checked credentials as file path but failed:", fsErr.message);
-        }
-      }
-    }
-
-    if (serviceAccount && serviceAccount.private_key && serviceAccount.private_key.includes("BEGIN PRIVATE KEY")) {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
-      credential = admin.cert(serviceAccount);
-      admin.initializeApp({ credential });
-      console.log("[FIREBASE_ADMIN] Synchronously initialized Firebase Admin SDK with credentials.");
-    } else {
-      try {
-        credential = admin.applicationDefault();
-        admin.initializeApp({ credential });
-        console.log("[FIREBASE_ADMIN] Synchronously initialized Firebase Admin SDK with application default credentials.");
-      } catch (appDefaultErr: any) {
-        admin.initializeApp();
-        console.log("[FIREBASE_ADMIN] Initialized default app without explicit credentials.");
-      }
-    }
-  }
-  adminDb = getAdminFirestore();
-} catch (e: any) {
-  console.log("[FIREBASE_ADMIN] Synchronous initialization failed, falling back:", e.message);
-}
-
-// --- Firebase Web-to-Admin Compatibility Layer ---
-class AdminDocumentReferenceWrap {
-  _ref: any;
-  constructor(ref: any) {
-    this._ref = ref;
-  }
-  get id() {
-    return this._ref.id;
-  }
-  get path() {
-    return this._ref.path;
-  }
-}
-
-class AdminDocumentSnapshotWrap {
-  _snap: any;
-  constructor(snap: any) {
-    this._snap = snap;
-  }
-  get id() {
-    return this._snap.id;
-  }
-  get ref() {
-    return new AdminDocumentReferenceWrap(this._snap.ref);
-  }
-  exists() {
-    return this._snap.exists;
-  }
-  data() {
-    return this._snap.data();
-  }
-}
-
-class AdminQuerySnapshotWrap {
-  _snap: any;
-  docs: AdminDocumentSnapshotWrap[];
-  constructor(snap: any) {
-    this._snap = snap;
-    this.docs = snap.docs.map((d: any) => new AdminDocumentSnapshotWrap(d));
-  }
-  get size() {
-    return this.docs.length;
-  }
-  forEach(callback: (doc: AdminDocumentSnapshotWrap) => void) {
-    this.docs.forEach(callback);
-  }
-}
-
-class AdminCollectionReferenceWrap {
-  _ref: any;
-  constructor(ref: any) {
-    this._ref = ref;
-  }
-}
-
-function initializeApp(config: any) {
-  return {};
-}
-
-function getFirestore(app?: any) {
-  return adminDb;
-}
-
-function doc(db: any, collectionName: string, docId: string) {
-  const realDb = db?._realDb || db || adminDb;
-  if (!realDb) {
-    throw new Error("Firestore Admin SDK is not initialized.");
-  }
-  return new AdminDocumentReferenceWrap(realDb.collection(collectionName).doc(docId));
-}
-
-function collection(db: any, collectionName: string) {
-  const realDb = db?._realDb || db || adminDb;
-  if (!realDb) {
-    throw new Error("Firestore Admin SDK is not initialized.");
-  }
-  return new AdminCollectionReferenceWrap(realDb.collection(collectionName));
-}
-
-function firebaseQuery(colRefWrap: any) {
-  return colRefWrap;
-}
-
-async function getDoc(docRefWrap: any) {
-  if (!docRefWrap || !docRefWrap._ref) {
-    throw new Error("Invalid document reference wrap.");
-  }
-  const snap = await docRefWrap._ref.get();
-  return new AdminDocumentSnapshotWrap(snap);
-}
-
-async function getDocs(colOrQueryWrap: any) {
-  if (!colOrQueryWrap || !colOrQueryWrap._ref) {
-    throw new Error("Invalid collection or query wrap.");
-  }
-  const snap = await colOrQueryWrap._ref.get();
-  return new AdminQuerySnapshotWrap(snap);
-}
-
-async function setDoc(docRefWrap: any, data: any, options?: any) {
-  if (!docRefWrap || !docRefWrap._ref) {
-    throw new Error("Invalid document reference wrap.");
-  }
-  if (options && options.merge) {
-    return await docRefWrap._ref.set(data, { merge: true });
-  }
-  return await docRefWrap._ref.set(data);
-}
-
-async function deleteDoc(docRefWrap: any) {
-  if (!docRefWrap || !docRefWrap._ref) {
-    throw new Error("Invalid document reference wrap.");
-  }
-  return await docRefWrap._ref.delete();
-}
-// Safe Firestore operation wrapper - catches PERMISSION_DENIED and other errors gracefully
-async function safeFirestoreOp<T>(operation: () => Promise<T>, fallbackValue: T, operationName: string = 'Firestore operation'): Promise<{ success: boolean; value: T; error?: string }> {
-  try {
-    const result = await operation();
-    return { success: true, value: result };
-  } catch (err: any) {
-    const errMsg = err?.message || err?.code || String(err);
-    const isPermissionDenied = errMsg.includes('PERMISSION_DENIED') || errMsg.includes('permission') || err?.code === 7;
-    if (isPermissionDenied) {
-      console.error(`[FIRESTORE] PERMISSION_DENIED during ${operationName}. Falling back to cache-only mode.`);
-    } else {
-      console.error(`[FIRESTORE] Error during ${operationName}: ${errMsg}`);
-    }
-    return { success: false, value: fallbackValue, error: errMsg };
-  }
-}
-// --- End Compatibility Layer ---
+// Firebase removed - using local database only
 
 export const serverCache = new Map<string, any>();
 export const searchCache = new Map<string, { results: any[], timestamp: number }>();
@@ -222,13 +38,7 @@ const upload = multer({
   }
 });
 
-// Initialize Firebase Admin for FCM (already initialized synchronously, keeping references for compatibility)
-let adminApp: any = null;
-try {
-  adminApp = admin.getApps().length ? admin.getApps()[0] : null;
-} catch (e) {
-  console.log("Failed to assign adminApp:", e);
-}
+// Firebase removed - using local database only
 
 // Persistent cache storage using JSON file
 const CACHE_FILE = path.join(process.cwd(), 'cache.json');
@@ -305,9 +115,10 @@ const loadGovExamDb = () => {
     
     const CATEGORY_MAP = [
       { id: 'result', title: 'Result' },
-      { id: 'admit-card', title: 'Admit Card' },
       { id: 'latest-job', title: 'Latest Jobs' },
       { id: 'answer-key', title: 'Answer Key' },
+      { id: 'exam-notice', title: 'Exam Notice' },
+      { id: 'admit-card', title: 'Admit Card' },
       { id: 'syllabus', title: 'Syllabus' },
       { id: 'admission', title: 'Admission' },
       { id: 'calendar', title: 'Calendar' },
@@ -559,20 +370,7 @@ const syncJobToCacheAndAliases = (id: string, jobData: any) => {
 
 const inFlightRequests = new Map<string, Promise<any>>();
 
-// Initialize Firebase SDK
-let db: any = null;
-let config: any = null;
-
-function isFirebaseConfigValid(cfg: any) {
-  // Force local CACHE-ONLY mode using only govexam_db.json as the Source of Truth
-  return false;
-}
-
-try {
-  console.log('[FIREBASE] Operating strictly in local CACHE-ONLY mode. Firestore is completely disconnected/bypassed. Website data source is strictly govexam_db.json.');
-} catch (e: any) {
-  console.error('[FIREBASE] Firebase initialization bypassed with error:', e);
-}
+// Firebase removed - using local database only
 
 // Clean FAQs About CEE Result 2026 box from all jobs dynamically
 async function cleanAllJobsCEEFAQ() {
@@ -623,112 +421,29 @@ async function cleanAllJobsCEEFAQ() {
             cached.aiGeneratedDetails = value.data.aiGeneratedDetails;
           }
         }
-        console.log(`[FIREBASE_CLEAN] Cleaned CEE FAQ from local cache key: ${key}`);
+        console.log(`[CACHE_CLEAN] Cleaned CEE FAQ from local cache key: ${key}`);
       }
     }
   }
 
   if (localCleanedCount > 0) {
     saveCache();
-    console.log(`[FIREBASE_CLEAN] Saved ${localCleanedCount} cleaned jobs back to cache.json`);
+    console.log(`[CACHE_CLEAN] Saved ${localCleanedCount} cleaned jobs back to cache.json`);
   }
 
-  // 2. Clean Firestore if available
-  if (!db) {
-    console.log('[FIREBASE_CLEAN] Firestore not initialized, skipping Firestore clean.');
-    return;
-  }
-
-  try {
-    const jobsCol = collection(db, 'jobs');
-    const snapshot = await getDocs(jobsCol);
-    console.log(`[FIREBASE_CLEAN] Scanning ${snapshot.docs.length} Firestore jobs for CEE FAQs...`);
-    
-    let firestoreCleanedCount = 0;
-    const batchSize = 20; // Process in batches of 20 documents
-    const delayBetweenBatches = 1000; // 1 second delay between batches
-    
-    for (let i = 0; i < snapshot.docs.length; i += batchSize) {
-      const batch = snapshot.docs.slice(i, i + batchSize);
-      const batchNum = Math.floor(i / batchSize) + 1;
-      const totalBatches = Math.ceil(snapshot.docs.length / batchSize);
-      
-      console.log(`[FIREBASE_CLEAN] Processing batch ${batchNum}/${totalBatches} (${batch.length} documents)...`);
-      
-      for (const d of batch) {
-        const data = d.data();
-        let isModified = false;
-        let content = data.content || '';
-        let aiGeneratedDetails = data.aiGeneratedDetails || '';
-
-        const cleanedContent = cleanHtmlContent(content);
-        const cleanedDetails = cleanHtmlContent(aiGeneratedDetails);
-
-        if (cleanedContent !== content) {
-          content = cleanedContent;
-          isModified = true;
-        }
-        if (cleanedDetails !== aiGeneratedDetails) {
-          aiGeneratedDetails = cleanedDetails;
-          isModified = true;
-        }
-
-        if (isModified) {
-          await setDoc(d.ref, {
-            content,
-            aiGeneratedDetails,
-            updatedAt: new Date().toISOString()
-          }, { merge: true });
-          firestoreCleanedCount++;
-          console.log(`[FIREBASE_CLEAN] Cleaned CEE FAQ from job in Firestore: ${d.id}`);
-          
-          // Update local cache
-          const cacheKey = `jobs_${d.id}`;
-          if (serverCache.has(cacheKey)) {
-            const cached = serverCache.get(cacheKey);
-            if (cached) {
-              cached.content = content;
-              cached.aiGeneratedDetails = aiGeneratedDetails;
-            }
-          }
-          const cachedEntry = cache.get(cacheKey);
-          if (cachedEntry && cachedEntry.data) {
-            cachedEntry.data.content = content;
-            cachedEntry.data.aiGeneratedDetails = aiGeneratedDetails;
-          }
-        }
-      }
-      
-      // Add delay between batches to avoid quota exhaustion
-      if (i + batchSize < snapshot.docs.length) {
-        console.log(`[FIREBASE_CLEAN] Waiting ${delayBetweenBatches}ms before next batch...`);
-        await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
-      }
-    }
-    
-    if (firestoreCleanedCount > 0) {
-      saveCache();
-    }
-    console.log(`[FIREBASE_CLEAN] Firestore scan complete. Cleaned ${firestoreCleanedCount} jobs in Firestore.`);
-  } catch (err: any) {
-    console.error('[FIREBASE_CLEAN] Error cleaning Firestore jobs:', err.message);
-  }
+  // Firebase clean removed - using local database only
 }
 
 async function startServer() {
   // Run dynamic cleanup of FAQs box
   cleanAllJobsCEEFAQ().catch(err => {
-    console.error('[FIREBASE_CLEAN] Background cleanup task failed:', err);
+    console.error('[CACHE_CLEAN] Background cleanup task failed:', err);
   });
 
   const app = express();
   const PORT = 3000;
 
-  // Serve dynamic firebase config for service worker
-  app.get("/api/firebase-config.js", (req, res) => {
-      res.setHeader("Content-Type", "application/javascript");
-      res.send(`self.DYNAMIC_FIREBASE_CONFIG = ${JSON.stringify(config || {})};`);
-  });
+  // Firebase config endpoint removed - using local database only
 
   app.use(express.json());
 
@@ -777,24 +492,7 @@ async function startServer() {
     }
   });
 
-  app.post("/api/subscribe", async (req, res) => {
-    try {
-      const { token } = req.body;
-      if (!token) return res.status(400).json({ success: false, error: "No token provided" });
-      
-      const admin = await import("firebase-admin");
-      const { getMessaging } = await import("firebase-admin/messaging");
-      if (admin.getApps().length > 0) {
-        await getMessaging().subscribeToTopic(token, "broadcast_alerts");
-        res.json({ success: true });
-      } else {
-        res.status(500).json({ success: false, error: "Admin SDK not initialized" });
-      }
-    } catch (error) {
-      console.error("FCM Subscribe error:", error);
-      res.status(500).json({ success: false, error: "Failed to subscribe" });
-    }
-  });
+  // Firebase subscribe endpoint removed - using local database only
 
   // Add health check endpoint for Cloud Run
   app.get("/api/health", (req, res) => {
@@ -864,22 +562,7 @@ async function startServer() {
         }
       }
 
-      // Fetch all jobs from Firestore for complete sitemap if database is available
-      if (db) {
-        try {
-          const jobsQuery = firebaseQuery(collection(db, 'jobs'));
-          const querySnapshot = await getDocs(jobsQuery);
-          querySnapshot.forEach((doc) => {
-            const jobData = doc.data();
-            if (jobData && jobData.path) {
-              paths.add(jobData.path);
-            }
-          });
-          console.log(`[SITEMAP] Added ${querySnapshot.size} jobs from Firestore`);
-        } catch (e: any) {
-          console.error('[SITEMAP] Firestore query failed:', e.message);
-        }
-      }
+      // Firebase removed from sitemap - using local database only
 
       // Append extracted paths to XML using clean URLs
       paths.forEach(path => {
@@ -1066,13 +749,34 @@ async function startServer() {
   // Helper to determine job category from title and path
   const determineJobCategory = (title: string, path: string): string => {
       const text = ((path || '') + ' ' + (title || '')).toLowerCase();
+      
+      // Exam Notice - highest priority
+      if (text.includes('notice') || text.includes('exam city details') || text.includes('city details') || text.includes('pe & mt notice') || text.includes('pet/pst notice')) return 'exam-notice';
+      
+      // Admit Card - but exclude exam city details
       if (text.includes('admit-card') || text.includes('admit card') || text.includes('hall ticket')) return 'admit-card';
-      if (text.includes('answer-key') || text.includes('answer key') || text.includes('key solution')) return 'answer-key';
+      
+      // Answer Key
+      if (text.includes('answer-key') || text.includes('answer key') || text.includes('key solution') || text.includes('answer sheet') || text.includes('omr')) return 'answer-key';
+      
+      // Calendar
       if (text.includes('calendar') || text.includes('calender') || text.includes('time table') || text.includes('schedule')) return 'calendar';
+      
+      // Syllabus
       if (text.includes('syllabus') || text.includes('pattern')) return 'syllabus';
+      
+      // Documents
       if (text.includes('pan card') || text.includes('aadhar') || text.includes('certificate') || text.includes('voter id') || text.includes('dakhil kharij')) return 'documents';
+      
+      // Result
       if (text.includes('result') || text.includes('merit list') || text.includes('score card')) return 'result';
+      
+      // Admission
       if (text.includes('admission')) return 'admission';
+      
+      // Latest Jobs - only recruitment/online form
+      if (text.includes('recruitment') || text.includes('online form') || text.includes('vacancy') || text.includes('bharti')) return 'latest-job';
+      
       return 'latest-job';
   };
 
@@ -1116,7 +820,7 @@ async function startServer() {
           dbItem = serverCache.get(`jobs_${link.id}`) || serverCache.get(link.id);
       }
 
-      // Check fields from dbItem first (as it contains the full accurate properties from govexam_db.json / Firestore)
+      // Check fields from dbItem first (as it contains the full accurate properties from govexam_db.json)
       if (dbItem) {
           if (dbItem.postDate) {
               const t = new Date(dbItem.postDate).getTime();
@@ -1210,8 +914,8 @@ async function startServer() {
               }
           }
 
-          // Determine if the post is recent (within last 7 days)
-          const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+          // Determine if the post is recent (within last 5 days)
+          const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
           let isRecent = false;
           
           let referenceDateStr = link.updatedAt || link.createdAt;
@@ -1224,7 +928,7 @@ async function startServer() {
           
           if (referenceDateStr) {
               const updatedDate = new Date(referenceDateStr).getTime();
-              if (!isNaN(updatedDate) && (Date.now() - updatedDate) <= SEVEN_DAYS_MS) {
+              if (!isNaN(updatedDate) && (Date.now() - updatedDate) <= FIVE_DAYS_MS) {
                   isRecent = true;
               }
           }
@@ -1244,11 +948,21 @@ async function startServer() {
               if (itemCat === 'latest-job') {
                   isNew = true;
               }
+              
+              // 1.1 If Category is "admission", tag it as "isNew = true"
+              if (itemCat === 'admission') {
+                  isNew = true;
+              }
+              
+              // 1.2 If Category is "documents", tag it as "isNew = true"
+              if (itemCat === 'documents') {
+                  isNew = true;
+              }
 
-              // 2. If Category is admit-card, result, or answer-key, and has keywords, tag it as "isOut = true"
+              // 2. If Category is admit-card, result, answer-key, syllabus, or exam-notice, and has keywords, tag it as "isOut = true"
               if (
-                  (itemCat === 'admit-card' || itemCat === 'result' || itemCat === 'answer-key' || itemCat === 'syllabus') &&
-                  (lowerTitle.includes('out') || lowerTitle.includes('released') || lowerTitle.includes('declared') || lowerTitle.includes('announced') || lowerTitle.includes('result') || lowerTitle.includes('admit card') || lowerTitle.includes('answer key') || lowerTitle.includes('exam city'))
+                  (itemCat === 'admit-card' || itemCat === 'result' || itemCat === 'answer-key' || itemCat === 'syllabus' || itemCat === 'exam-notice') &&
+                  (lowerTitle.includes('out') || lowerTitle.includes('released') || lowerTitle.includes('declared') || lowerTitle.includes('announced') || lowerTitle.includes('result') || lowerTitle.includes('admit card') || lowerTitle.includes('answer key') || lowerTitle.includes('exam city') || lowerTitle.includes('notice') || lowerTitle.includes('city details'))
               ) {
                   isOut = true;
               }
@@ -1259,6 +973,11 @@ async function startServer() {
                       if (dbItem.tags.includes('new')) isNew = true;
                       if (dbItem.tags.includes('out')) isOut = true;
                   }
+              }
+              
+              // Debug logging for first few items
+              if (Math.random() < 0.05) { // Log ~5% of items to avoid spam
+                  console.log(`[TAG_DEBUG] ${cleanTitle.substring(0, 30)}... - Category: ${itemCat}, isNew: ${isNew}, isOut: ${isOut}, isRecent: ${isRecent}`);
               }
           } else {
               // If not recent, aggressively strip any explicit tags that might have been saved
@@ -1279,9 +998,10 @@ async function startServer() {
           
           const requiredCategories = [
               { id: 'result', title: 'Result', links: [] },
-              { id: 'admit-card', title: 'Admit Card', links: [] },
               { id: 'latest-job', title: 'Latest Jobs', links: [] },
               { id: 'answer-key', title: 'Answer Key', links: [] },
+              { id: 'exam-notice', title: 'Exam Notice', links: [] },
+              { id: 'admit-card', title: 'Admit Card', links: [] },
               { id: 'syllabus', title: 'Syllabus', links: [] },
               { id: 'admission', title: 'Admission', links: [] },
               { id: 'calendar', title: 'Calendar', links: [] },
@@ -1329,6 +1049,7 @@ async function startServer() {
                           title: job.title || 'Untitled',
                           url: jobPath,
                           path: jobPath,
+                          category: job.category,
                           postDate: job.postDate || (job.scrapedAt ? job.scrapedAt.split('T')[0] : new Date().toISOString().split('T')[0]),
                           createdAt: job.createdAt || job.scrapedAt || new Date().toISOString(),
                           updatedAt: job.updatedAt || job.scrapedAt || new Date().toISOString()
@@ -1372,8 +1093,7 @@ async function startServer() {
                       if (title.includes('admission') && !categoryMap.has('admission')) categoryMap.set('admission', []);
                       if (title.includes('calendar') && !categoryMap.has('calendar')) categoryMap.set('calendar', []);
                       if (title.includes('document') && !categoryMap.has('documents')) categoryMap.set('documents', []);
-                      if (title.includes('calendar') && !categoryMap.has('calendar')) categoryMap.set('calendar', []);
-                      if (title.includes('document') && !categoryMap.has('documents')) categoryMap.set('documents', []);
+                      if (title.includes('exam notice') && !categoryMap.has('exam-notice')) categoryMap.set('exam-notice', []);
                       if (title.includes('latest') && !categoryMap.has('latest-job')) categoryMap.set('latest-job', []);
                   }
               }
@@ -1391,9 +1111,16 @@ async function startServer() {
               return null;
           };
           
-          // 3. Re-distribute jobs based on strict determination
+          // 2. Sort allJobs by date (most recent first) before distribution
+          allJobs.sort((a, b) => {
+              const dateA = new Date(a.scrapedAt || a.updatedAt || a.createdAt || a.postDate).getTime();
+              const dateB = new Date(b.scrapedAt || b.updatedAt || b.createdAt || b.postDate).getTime();
+              return dateB - dateA; // Most recent first
+          });
+          
+          // 3. Re-distribute jobs based on stored category or strict determination
           allJobs.forEach(job => {
-              let trueCat = determineJobCategory(job.title, job.url || job.path);
+              let trueCat = job.category || determineJobCategory(job.title, job.url || job.path);
               let bucketKey = getBucketForCat(trueCat) || getBucketForCat('latest-job');
               if (bucketKey && categoryMap.has(bucketKey)) {
                   // Show all items per category (removed limit)
@@ -1439,14 +1166,13 @@ async function startServer() {
           
           // ALWAYS dynamically rebuild homepage categories and trending lists 
           // directly from the central serverCache memory holding all local govexam_db.json jobs
-          // as well as Firestore synced ones. This gives an ultra-fast hybrid fallback
-          // that renders instantly and remains fully functional offline/during Firebase exhaustion.
-          console.log('[HOME] Dynamically compiling from serverCache (Hybrid Fallback Mode)');
+          console.log('[HOME] Dynamically compiling from serverCache (Local Mode)');
           console.log('BEFORE enforce:', copiedData.data.map((c:any)=>c.title)); console.log('BEFORE enforce:', copiedData.data.map((c:any)=>c.title)); copiedData = enforceHomepageCategories(copiedData); console.log('AFTER enforce:', copiedData.data.map((c:any)=>c.title)); console.log('AFTER enforce:', copiedData.data.map((c:any)=>c.title));
           
           if (copiedData.data && Array.isArray(copiedData.data)) {
               copiedData.data.forEach((category: any) => {
                   if (category && category.links) {
+                      console.log(`[TAG_DEBUG] Processing category: ${category.title} with ${category.links.length} links`);
                       category.links = maskSequence(category.links);
                       
                       // Dynamically apply tags based on the correct assigned category
@@ -1462,6 +1188,11 @@ async function startServer() {
                       else if (titleLower.includes('admission')) catId = 'admission';
                       
                       category.links = applyHomepageTags(category.links, catId);
+                      
+                      // Count tags in this category
+                      const newTags = category.links.filter((l: any) => l.isNew).length;
+                      const outTags = category.links.filter((l: any) => l.isOut).length;
+                      console.log(`[TAG_DEBUG] Category ${category.title}: ${newTags} NEW tags, ${outTags} OUT tags`);
                   }
               });
           }
@@ -1669,16 +1400,17 @@ async function startServer() {
       if (!targetPath.startsWith('/')) {
         targetPath = '/' + targetPath;
       }
-      // --- READ ONLY FROM FIRESTORE DATABASE ---
+      // --- READ ONLY FROM LOCAL DATABASE ---
       if (targetPath === '/' || targetPath === '') {
           // Read Home index data - Self-initializing Hybrid Cache
           if (!serverCache.has('home_data_index')) {
               const defaultHomeData = {
                   data: [
                       { id: 'result', title: 'Result', links: [] },
-                      { id: 'admit-card', title: 'Admit Card', links: [] },
                       { id: 'latest-job', title: 'Latest Jobs', links: [] },
                       { id: 'answer-key', title: 'Answer Key', links: [] },
+                      { id: 'exam-notice', title: 'Exam Notice', links: [] },
+                      { id: 'admit-card', title: 'Admit Card', links: [] },
                       { id: 'syllabus', title: 'Syllabus', links: [] },
                       { id: 'admission', title: 'Admission', links: [] },
                       { id: 'calendar', title: 'Calendar', links: [] },
@@ -1875,19 +1607,7 @@ async function startServer() {
           }
 
           if (!searchQuery || !searchQuery.trim()) {
-              let homeData: any = null;
-              if (db) {
-                  try {
-                      const homeDocRef = doc(db, 'home_data', 'index');
-                      const homeDoc = await getDoc(homeDocRef);
-                      if (homeDoc.exists()) homeData = homeDoc.data();
-                  } catch (e: any) {
-                      console.error("Home doc fetch logic failed during empty search:", e.message);
-                  }
-              }
-              if (!homeData && serverCache.has('home_data_index')) {
-                  homeData = serverCache.get('home_data_index');
-              }
+              let homeData: any = serverCache.get('home_data_index');
               return res.json(homeData ? maskDataSequence(homeData) : { success: false, error: "No data" });
           }
 
@@ -2041,7 +1761,7 @@ async function startServer() {
                   let isNew = false;
                   let isOut = false;
                   
-                  // Check tags from Firestore data
+                  // Check tags from local database
                   const dbItem = itemData || serverCache.get(`jobs_${id}`);
                   if (dbItem && dbItem.tags && Array.isArray(dbItem.tags)) {
                       if (dbItem.tags.includes('new')) {
@@ -2059,7 +1779,7 @@ async function startServer() {
                           isNew = true;
                       }
 
-                      // 2. Is the item in Firestore/cache created or updated recently?
+                      // 2. Is the item in local database created or updated recently?
                       let isOldItem = false;
                       if (dbItem) {
                           const timestamp = dbItem.createdAt || dbItem.updatedAt;
@@ -2321,34 +2041,7 @@ async function startServer() {
   app.get("/api/admin/jobs", verifyAdmin, async (req, res): Promise<any> => {
     try {
       let jobs: any[] = [];
-      let usedCache = false;
-      if (db) {
-        const result = await safeFirestoreOp(async () => {
-          const jobsCol = collection(db, 'jobs');
-          const snapshot = await getDocs(jobsCol);
-          console.log(`[ADMIN JOBS] Found ${snapshot.docs.length} jobs in Firestore`);
-          return snapshot.docs.map(d => {
-            const data = d.data();
-            return {
-              id: d.id,
-              title: data.title,
-              path: data.path,
-              updatedAt: data.updatedAt,
-              createdAt: data.createdAt,
-              lastCheckedAt: data.lastCheckedAt
-            };
-          });
-        }, [] as any[], 'admin/jobs list');
-        
-        if (result.success) {
-          jobs = result.value;
-        } else {
-          // Firestore failed (permission denied etc)
-          usedCache = true;
-        }
-      } else {
-        usedCache = true;
-      }
+      let usedCache = true; // Always use cache - Firebase removed
       
       // ALWAYS read from serverCache to ensure we include jobs loaded from govexam_db.json
       // or jobs added in cache-only mode.
@@ -2437,22 +2130,8 @@ async function startServer() {
       const cleanId = decodedId.replace(/^\/+|\/+$/g, '');
       
       let job: any = null;
-      if (db) {
-        const result = await safeFirestoreOp(async () => {
-          const jobDocRef = doc(db, 'jobs', cleanId);
-          const jobDoc = await getDoc(jobDocRef);
-          if (jobDoc.exists()) {
-            return { id: jobDoc.id, ...jobDoc.data() };
-          }
-          return null;
-        }, null, `admin/job get ${cleanId}`);
-        
-        if (result.success) {
-          job = result.value;
-        }
-      }
       
-      // Fallback to cache if Firestore failed or returned null
+      // Always use cache - Firebase removed
       if (!job) {
         console.log(`[ADMIN GET JOB] Trying cache for ID: ${cleanId}`);
         const escapeDot = (s: string) => s.replace(/\./g, '%2E');
@@ -2491,23 +2170,7 @@ async function startServer() {
         return res.status(400).json({ success: false, error: "Title and URL are required" });
       }
       
-      let homeData: any = null;
-      let firestoreAvailable = false;
-      if (db) {
-        const result = await safeFirestoreOp(async () => {
-          const homeDocRef = doc(db, 'home_data', 'index');
-          const homeDoc = await getDoc(homeDocRef);
-          if (homeDoc.exists()) return homeDoc.data();
-          return null;
-        }, null, 'add-to-latest-jobs read');
-        if (result.success) {
-          firestoreAvailable = true;
-          homeData = result.value;
-        }
-      }
-      if (!homeData) {
-        homeData = serverCache.get('home_data_index');
-      }
+      let homeData: any = serverCache.get('home_data_index');
       
       if (!homeData) {
         return res.json({ success: false, error: "home_data/index not found" });
@@ -2542,18 +2205,12 @@ async function startServer() {
             };
             targetCat.links.unshift(newLink);
             
-            if (db && firestoreAvailable) {
-              await safeFirestoreOp(async () => {
-                const homeDocRef = doc(db, 'home_data', 'index');
-                await setDoc(homeDocRef, homeData);
-              }, undefined, 'add-to-latest-jobs write');
-            }
-            
+            // Firebase write removed - using local cache only
             serverCache.set('home_data_index', homeData);
             cache.set('home_data_index', { data: homeData, timestamp: Date.now() });
             saveCache();
             
-            return res.json({ success: true, message: `Added to ${targetCategoryName} category` + (!firestoreAvailable ? " (saved to cache)" : "") });
+            return res.json({ success: true, message: `Added to ${targetCategoryName} category` });
           }
           return res.json({ success: false, error: `Already exists in ${targetCategoryName}` });
         }
@@ -2701,24 +2358,8 @@ async function startServer() {
       console.log(`[UPDATE] Attempting to update job with ID: ${cleanId}`);
       
       let existingJobData: any = null;
-      let firestoreAvailable = false;
-      if (db) {
-        const result = await safeFirestoreOp(async () => {
-          const jobDocRef = doc(db, 'jobs', cleanId);
-          const jobDoc = await getDoc(jobDocRef);
-          if (jobDoc.exists()) {
-            return jobDoc.data();
-          }
-          return null;
-        }, null, `admin/job update get ${cleanId}`);
-        
-        if (result.success && result.value) {
-          firestoreAvailable = true;
-          existingJobData = result.value;
-        }
-      }
       
-      // Fallback: check cache with cleanId and alternate aliases
+      // Always use cache - Firebase removed
       if (!existingJobData) {
         console.log(`[UPDATE] Looking for job in cache with ID: ${cleanId}`);
         console.log(`[UPDATE] Original ID from request: ${id}`);
@@ -2855,7 +2496,7 @@ async function startServer() {
       
       saveCache();
       console.log(`[UPDATE] Successfully updated job: ${id}`);
-      res.json({ success: true, message: "Job updated successfully" + (!firestoreAvailable ? " (saved to cache)" : "") });
+      res.json({ success: true, message: "Job updated successfully" });
     } catch (error: any) {
       console.error(`[UPDATE ERROR] ${error.message}`);
       res.status(500).json({ success: false, error: "Failed to update job. Please try again." });
@@ -2903,7 +2544,7 @@ async function startServer() {
       if (!targetPath.startsWith('/')) targetPath = '/' + targetPath;
       if (!targetPath.endsWith('/') && targetPath !== '/') targetPath = targetPath + '/';
       
-      // Safe document ID for Firebase
+      // Safe document ID for local cache
       const jobId = encodeURIComponent(targetPath).replace(/\./g, '%2E');
       
       console.log(`[CREATE JOB] Creating manual job: ${title} with path: ${path}, Category: ${targetCategory}`);
@@ -2916,15 +2557,7 @@ async function startServer() {
         createdAt: new Date().toISOString()
       };
       
-      // Try Firestore save (non-blocking)
-      let firestoreAvailable = false;
-      if (db) {
-        const result = await safeFirestoreOp(async () => {
-          const docRef = doc(db, 'jobs', jobId);
-          await setDoc(docRef, jobData);
-        }, undefined, `admin/job create ${jobId}`);
-        firestoreAvailable = result.success;
-      }
+      // Firebase save removed - using local cache only
       
       // Always add to cache and sync aliases
       syncJobToCacheAndAliases(jobId, jobData);
@@ -3004,7 +2637,7 @@ async function startServer() {
       }
       
       saveCache();
-      res.json({ success: true, message: "Job created successfully" + (!firestoreAvailable ? " (saved to cache)" : "") });
+      res.json({ success: true, message: "Job created successfully" });
     } catch (error: any) {
       console.error(`[CREATE JOB ERROR] ${error.message}`);
       res.status(500).json({ success: false, error: "Failed to create job. Please try again." });
@@ -3244,15 +2877,7 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
         createdAt: new Date().toISOString()
       };
 
-      // Save to Firestore
-      let firestoreAvailable = false;
-      if (db) {
-        const result = await safeFirestoreOp(async () => {
-          const docRef = doc(db, 'jobs', jobId);
-          await setDoc(docRef, jobData);
-        }, undefined, `auto-scrape create ${jobId}`);
-        firestoreAvailable = result.success;
-      }
+      // Firebase save removed - using local cache only
 
       // Add to server cache and all aliases
       syncJobToCacheAndAliases(jobId, jobData);
@@ -3391,7 +3016,7 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
         console.log(`[APK UPLOAD] Continuing without disk write (serverless environment)`);
       }
       
-      // Update app version info in Firestore
+      // Update app version info in local cache
       const { versionCode, versionName, releaseNotes, isMandatory } = req.body;
       
       if (versionCode && versionName) {
@@ -3404,13 +3029,7 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
           updatedAt: new Date().toISOString()
         };
         
-        if (db) {
-          await safeFirestoreOp(async () => {
-            const appUpdateRef = doc(db, 'app_updates', 'android');
-            await setDoc(appUpdateRef, versionData, { merge: true });
-            console.log(`[APK UPLOAD] Updated app version info in Firestore: v${versionName} (${versionCode})`);
-          }, undefined, 'upload-apk version update');
-        }
+        // Firebase removed - using local cache only
         
         // Always save to cache
         serverCache.set('app_updates_android', versionData);
@@ -3432,28 +3051,25 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
   // Rebuild home_data manually from jobs collection (Admin only)
   app.get("/api/admin/rebuild-home", async (req, res): Promise<any> => {
     try {
-      if (!db) return res.status(500).json({ success: false, error: "Database not available" });
-      
       console.log('[REBUILD] Starting home_data rebuild...');
       
-      // 1. Fetch ALL jobs
-      const jobsQuery = firebaseQuery(collection(db, 'jobs'));
-      const jobsSnapshot = await getDocs(jobsQuery);
-      
+      // 1. Fetch ALL jobs from serverCache (local only)
       const allJobs: any[] = [];
-      jobsSnapshot.forEach(doc => {
-          const job = { id: doc.id, ...doc.data() as any };
-          const jobPath = (job.path || job.url || '').toLowerCase().trim();
-          if (jobPath) {
-              allJobs.push({
-                  id: job.id,
-                  title: job.title || 'Untitled',
-                  url: jobPath,
-                  path: jobPath,
-                  updatedAt: job.updatedAt || job.createdAt || job.postDate || ''
-              });
+      for (const [key, item] of serverCache.entries()) {
+          if (key.startsWith('jobs_')) {
+              const job = item.data || item;
+              const jobPath = (job.path || job.url || '').toLowerCase().trim();
+              if (jobPath) {
+                  allJobs.push({
+                      id: job.id || key.substring(5),
+                      title: job.title || 'Untitled',
+                      url: jobPath,
+                      path: jobPath,
+                      updatedAt: job.updatedAt || job.createdAt || job.postDate || ''
+                  });
+              }
           }
-      });
+      }
       
       // Sort newest first
       allJobs.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
@@ -3507,9 +3123,7 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
       // 5. Update trending (top 10 overall)
       newHomeData.trending = allJobs.slice(0, 10).map((job, idx) => ({ ...job, id: `trend-${job.id}-${idx}` }));
       
-      // 6. Save to Firestore
-      const homeDocRef = doc(db, 'home_data', 'index');
-      await setDoc(homeDocRef, newHomeData);
+      // Firebase save removed - using local cache only
       
       // Update Cache
       serverCache.set('home_data_index', newHomeData);
@@ -3537,32 +3151,8 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
         updatedAt: new Date().toISOString()
       };
       
-      // Try cache first
+      // Try cache first - Firebase removed
       const cachedVersion = serverCache.get('app_updates_android');
-      
-      if (db) {
-        const result = await safeFirestoreOp(async () => {
-          const appUpdateRef = doc(db, 'app_updates', 'android');
-          const appUpdateDoc = await getDoc(appUpdateRef);
-          if (appUpdateDoc.exists()) {
-            return appUpdateDoc.data();
-          }
-          return null;
-        }, null, 'app-version read');
-        
-        if (result.success && result.value) {
-          const data = result.value;
-          return res.json({
-            success: true,
-            versionCode: data.versionCode,
-            versionName: data.versionName,
-            downloadUrl: data.downloadUrl,
-            releaseNotes: data.releaseNotes,
-            isMandatory: data.isMandatory,
-            updatedAt: data.updatedAt
-          });
-        }
-      }
       
       // Fallback to cache
       if (cachedVersion) {
