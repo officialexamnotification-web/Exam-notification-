@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      // Fix Firebase default config cookie issue
+      document.cookie = "__FIREBASE_DEFAULTS__=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    </script>
+    <script>
+      // Safeguard against third-party libraries/extensions attempting to override the read-only window.fetch property
+      (function() {
+        var _originalFetch = window.fetch;
+        try {
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return _originalFetch;
+            },
+            set: function(val) {
+              console.warn('Overriding window.fetch safely:', val);
+              _originalFetch = val;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          console.warn('Failed to define safe setter for fetch:', e);
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GOVEXAM NOTIFICATION | Latest Jobs, Admit Cards, Results</title>
+    <meta name="theme-color" content="#104ba6" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" sizes="any" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    
+    <!-- Enhanced Meta Tags for SEO -->
+    <meta name="description" content="GOVEXAM NOTIFICATION - Trusted Government Job Notification Portal. Get direct access to latest government job notifications, results, admit cards, answer keys from UPSC, SSC, Railway, Banking, and State PCS. We provide direct links to official government websites for all exam updates." />
+    <meta name="keywords" content="government jobs, latest jobs, admit card, result, answer key, UPSC, SSC, Railway, Banking, State PCS, government exam notifications, govexam notification, Sarkari Result alternative" />
+    <meta name="author" content="GOVEXAM NOTIFICATION" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://govexamnotification.online" />
+    
+    <!-- Open Graph Meta Tags for Social Media -->
+    <meta property="og:title" content="GOVEXAM NOTIFICATION | Trusted Government Job Notifications" />
+    <meta property="og:description" content="Trusted Government Job Notification Portal. Get direct access to latest government job notifications, results, admit cards, answer keys from UPSC, SSC, Railway, Banking, and State PCS with direct government website links." />
+    <meta property="og:url" content="https://govexamnotification.online" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="GOVEXAM NOTIFICATION" />
+    <meta property="og:image" content="https://govexamnotification.online/icon.svg" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="GOVEXAM NOTIFICATION | Trusted Government Job Notifications" />
+    <meta name="twitter:description" content="Trusted Government Job Notification Portal. Get direct access to latest government job notifications, results, admit cards, answer keys from UPSC, SSC, Railway, Banking, and State PCS with direct government website links." />
+    <meta name="twitter:image" content="https://govexamnotification.online/icon.svg" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
