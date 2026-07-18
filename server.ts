@@ -2645,9 +2645,9 @@ async function startServer() {
     try {
       let jobs: any[] = [];
       let usedCache = false;
-      if (db) {
+      if (adminDb) {
         const result = await safeFirestoreOp(async () => {
-          const jobsCol = collection(db, 'jobs');
+          const jobsCol = collection(adminDb, 'jobs');
           // Add limit to prevent data exhaustion - fetch only 1000 jobs for admin panel
           const limitedQuery = firebaseQuery(jobsCol).limit(1000);
           const snapshot = await getDocs(limitedQuery);
@@ -2764,9 +2764,9 @@ async function startServer() {
       const cleanId = decodedId.replace(/^\/+|\/+$/g, '');
       
       let job: any = null;
-      if (db) {
+      if (adminDb) {
         const result = await safeFirestoreOp(async () => {
-          const jobDocRef = doc(db, 'jobs', cleanId);
+          const jobDocRef = doc(adminDb, 'jobs', cleanId);
           const jobDoc = await getDoc(jobDocRef);
           if (jobDoc.exists()) {
             return { id: jobDoc.id, ...jobDoc.data() };
@@ -2820,9 +2820,9 @@ async function startServer() {
       
       let homeData: any = null;
       let firestoreAvailable = false;
-      if (db) {
+      if (adminDb) {
         const result = await safeFirestoreOp(async () => {
-          const homeDocRef = doc(db, 'home_data', 'index');
+          const homeDocRef = doc(adminDb, 'home_data', 'index');
           const homeDoc = await getDoc(homeDocRef);
           if (homeDoc.exists()) return homeDoc.data();
           return null;
@@ -2869,9 +2869,9 @@ async function startServer() {
             };
             targetCat.links.unshift(newLink);
             
-            if (db && firestoreAvailable) {
+            if (adminDb && firestoreAvailable) {
               await safeFirestoreOp(async () => {
-                const homeDocRef = doc(db, 'home_data', 'index');
+                const homeDocRef = doc(adminDb, 'home_data', 'index');
                 await setDoc(homeDocRef, homeData);
               }, undefined, 'add-to-latest-jobs write');
             }
@@ -3065,9 +3065,9 @@ async function startServer() {
       
       let existingJobData: any = null;
       let firestoreAvailable = false;
-      if (db) {
+      if (adminDb) {
         const result = await safeFirestoreOp(async () => {
-          const jobDocRef = doc(db, 'jobs', cleanId);
+          const jobDocRef = doc(adminDb, 'jobs', cleanId);
           const jobDoc = await getDoc(jobDocRef);
           if (jobDoc.exists()) {
             return jobDoc.data();
@@ -3130,9 +3130,9 @@ async function startServer() {
       }
       
       // Try Firestore save (non-blocking - will fall back to cache)
-      if (db && firestoreAvailable) {
+      if (adminDb && firestoreAvailable) {
         await safeFirestoreOp(async () => {
-          const jobDocRef = doc(db, 'jobs', cleanId);
+          const jobDocRef = doc(adminDb, 'jobs', cleanId);
           await setDoc(jobDocRef, updateData, { merge: true });
         }, undefined, `admin/job update save ${cleanId}`);
       }
@@ -3167,9 +3167,9 @@ async function startServer() {
 
           // 1. Update Home Data
           let homeData: any = null;
-          if (db && firestoreAvailable) {
+          if (adminDb && firestoreAvailable) {
               const homeResult = await safeFirestoreOp(async () => {
-                  const homeDocRef = doc(db, 'home_data', 'index');
+                  const homeDocRef = doc(adminDb, 'home_data', 'index');
                   const homeDoc = await getDoc(homeDocRef);
                   if (homeDoc.exists()) return homeDoc.data();
                   return null;
@@ -3203,9 +3203,9 @@ async function startServer() {
                   });
               }
               if (updatedHome) {
-                  if (db && firestoreAvailable) {
+                  if (adminDb && firestoreAvailable) {
                       await safeFirestoreOp(async () => {
-                          const homeDocRef = doc(db, 'home_data', 'index');
+                          const homeDocRef = doc(adminDb, 'home_data', 'index');
                           await setDoc(homeDocRef, homeData);
                       }, undefined, 'sync home_data write');
                   }
@@ -3216,9 +3216,9 @@ async function startServer() {
           }
           
           // 2. Update Category Pages
-          if (db && firestoreAvailable) {
+          if (adminDb && firestoreAvailable) {
               const catResult = await safeFirestoreOp(async () => {
-                  const catDocs = await getDocs(collection(db, 'category_pages'));
+                  const catDocs = await getDocs(collection(adminDb, 'category_pages'));
                   for (const catDoc of catDocs.docs) {
                       const catData = catDoc.data();
                       let updatedCat = false;
@@ -3354,9 +3354,9 @@ async function startServer() {
       
       // Try Firestore save (non-blocking)
       let firestoreAvailable = false;
-      if (db) {
+      if (adminDb) {
         const result = await safeFirestoreOp(async () => {
-          const docRef = doc(db, 'jobs', jobId);
+          const docRef = doc(adminDb, 'jobs', jobId);
           await setDoc(docRef, jobData);
         }, undefined, `admin/job create ${jobId}`);
         firestoreAvailable = result.success;
@@ -3369,9 +3369,9 @@ async function startServer() {
       // ADD TO HOMEPAGE (TARGET CATEGORY & TRENDING)
       try {
           let homeData: any = null;
-          if (db && firestoreAvailable) {
+          if (adminDb && firestoreAvailable) {
               const homeResult = await safeFirestoreOp(async () => {
-                  const homeDocRef = doc(db, 'home_data', 'index');
+                  const homeDocRef = doc(adminDb, 'home_data', 'index');
                   const homeDoc = await getDoc(homeDocRef);
                   if (homeDoc.exists()) return homeDoc.data();
                   return null;
@@ -3426,9 +3426,9 @@ async function startServer() {
                   }
               }
               
-              if (db && firestoreAvailable) {
+              if (adminDb && firestoreAvailable) {
                   await safeFirestoreOp(async () => {
-                      const homeDocRef = doc(db, 'home_data', 'index');
+                      const homeDocRef = doc(adminDb, 'home_data', 'index');
                       await setDoc(homeDocRef, homeData);
                   }, undefined, 'create job home_data write');
               }
@@ -3438,9 +3438,9 @@ async function startServer() {
               
               // 3. Add to Category Page
               let catData = serverCache.get(`category_pages_${targetCategory}`);
-              if (!catData && db && firestoreAvailable) {
+              if (!catData && adminDb && firestoreAvailable) {
                   const catResult = await safeFirestoreOp(async () => {
-                      const catDocRef = doc(db, 'category_pages', targetCategory);
+                      const catDocRef = doc(adminDb, 'category_pages', targetCategory);
                       const catDoc = await getDoc(catDocRef);
                       if (catDoc.exists()) return catDoc.data();
                       return null;
@@ -3464,9 +3464,9 @@ async function startServer() {
               serverCache.set(`category_pages_${targetCategory}`, catData);
               cache.set(`category_pages_${targetCategory}`, { data: catData, timestamp: Date.now() });
               
-              if (db && firestoreAvailable) {
+              if (adminDb && firestoreAvailable) {
                   await safeFirestoreOp(async () => {
-                      const catDocRef = doc(db, 'category_pages', targetCategory);
+                      const catDocRef = doc(adminDb, 'category_pages', targetCategory);
                       await setDoc(catDocRef, catData);
                   }, undefined, 'create job category_page write');
               }
@@ -3718,9 +3718,9 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
 
       // Save to Firestore
       let firestoreAvailable = false;
-      if (db) {
+      if (adminDb) {
         const result = await safeFirestoreOp(async () => {
-          const docRef = doc(db, 'jobs', jobId);
+          const docRef = doc(adminDb, 'jobs', jobId);
           await setDoc(docRef, jobData);
         }, undefined, `auto-scrape create ${jobId}`);
         firestoreAvailable = result.success;
@@ -3732,9 +3732,9 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
       // ADD TO HOMEPAGE INDEX (Trending & Categories)
       try {
         let homeData: any = null;
-        if (db && firestoreAvailable) {
+        if (adminDb && firestoreAvailable) {
           const homeResult = await safeFirestoreOp(async () => {
-            const homeDocRef = doc(db, 'home_data', 'index');
+            const homeDocRef = doc(adminDb, 'home_data', 'index');
             const homeDoc = await getDoc(homeDocRef);
             if (homeDoc.exists()) return homeDoc.data();
             return null;
@@ -3789,9 +3789,9 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
             }
           }
 
-          if (db && firestoreAvailable) {
+          if (adminDb && firestoreAvailable) {
             await safeFirestoreOp(async () => {
-              const homeDocRef = doc(db, 'home_data', 'index');
+              const homeDocRef = doc(adminDb, 'home_data', 'index');
               await setDoc(homeDocRef, homeData);
             }, undefined, 'auto-scrape home_data write');
           }
@@ -3838,9 +3838,9 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
         serverCache.set(`category_pages_${targetCategory}`, catData);
         cache.set(`category_pages_${targetCategory}`, { data: catData, timestamp: Date.now() });
 
-        if (db && firestoreAvailable) {
+        if (adminDb && firestoreAvailable) {
           await safeFirestoreOp(async () => {
-            const catDocRef = doc(db, 'category_pages', targetCategory);
+            const catDocRef = doc(adminDb, 'category_pages', targetCategory);
             await setDoc(catDocRef, catData);
           }, undefined, 'auto-scrape category_page write');
         }
