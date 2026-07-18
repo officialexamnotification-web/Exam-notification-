@@ -680,7 +680,7 @@ const saveCache = () => {
 const syncJobToCacheAndAliases = (id: string, jobData: any) => {
   if (!id) return;
   if (jobData && jobData.content) {
-    jobData.content = sanitizePostContent(stripImagesAndLinks(jobData.content));
+    jobData.content = sanitizePostContent(jobData.content);
   }
   let decodedId = id;
   try {
@@ -957,7 +957,7 @@ async function startServer() {
               { pattern: /useful\s+links/i, name: 'useful links' }
           ];
 
-          // Find and extract only the specific sections
+          // Find and extract only the specific sections with all their content including links
           let resultHtml = '';
           let foundSections: string[] = [];
           
@@ -981,11 +981,12 @@ async function startServer() {
                           
                           while (nextElement.length && 
                                  !['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(nextElement[0].tagName.toLowerCase())) {
+                              // Clone and add all content including links
                               sectionContent = sectionContent.add(nextElement.clone());
                               nextElement = nextElement.next();
                           }
                           
-                          // Add section with proper spacing
+                          // Add section with proper spacing, preserving all links
                           resultHtml += '<div class="section">' + $.html(sectionContent) + '</div>';
                       }
                   }
