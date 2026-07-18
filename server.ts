@@ -680,7 +680,7 @@ const saveCache = () => {
 const syncJobToCacheAndAliases = (id: string, jobData: any) => {
   if (!id) return;
   if (jobData && jobData.content) {
-    jobData.content = stripImagesAndLinks(jobData.content);
+    jobData.content = sanitizePostContent(stripImagesAndLinks(jobData.content));
   }
   let decodedId = id;
   try {
@@ -734,23 +734,80 @@ try {
   console.error('[FIREBASE] Firebase initialization error:', e);
 }
 
+// Comprehensive content cleaning function
+const cleanJobContent = (html: string) => {
+  if (!html) return html;
+  
+  let cleaned = html;
+  
+  // 1. Remove social media links (Telegram, WhatsApp)
+  const socialMediaLinks = [
+    /https?:\/\/t\.me\/[^\s<>"']+/gi,
+    /https?:\/\/whatsapp\.com\/channel\/[^\s<>"']+/gi,
+    /https?:\/\/www\.whatsapp\.com\/channel\/[^\s<>"']+/gi,
+    /https?:\/\/telegram\.me\/[^\s<>"']+/gi,
+  ];
+  socialMediaLinks.forEach(regex => {
+    cleaned = cleaned.replace(regex, '');
+  });
+  
+  // 2. Remove app store links
+  const appStoreLinks = [
+    /https?:\/\/play\.google\.com\/store\/apps\/[^\s<>"']+/gi,
+    /https?:\/\/apps\.apple\.com\/[^\s<>"']+/gi,
+  ];
+  appStoreLinks.forEach(regex => {
+    cleaned = cleaned.replace(regex, '');
+  });
+  
+  // 3. Remove branding/disclaimer text
+  const brandingPatterns = [
+    /Official Website of ™️\.com\.cm[^]*?\n/gi,
+    /Since 2009[^]*?\n/gi,
+    /Trademark Applications[^]*?\n/gi,
+    /Controller General of Patents[^]*?\n/gi,
+    /Application Nos\.[^]*?\n/gi,
+    /Disclaimer:[^]*?examinees[^]*?legal document[^]*?inadvertent errors[^]*?examination[^]*?\n/gi,
+    /While every effort has been made[^]*?not responsible[^]*?\n/gi,
+    /team to ensure the accuracy[^]*?\n/gi,
+    /sarkariresult\.com\.cm/gi,
+    /Sarkari Result/gi,
+    /SarkariNaukri/gi,
+  ];
+  brandingPatterns.forEach(regex => {
+    cleaned = cleaned.replace(regex, '');
+  });
+  
+  // 4. Remove Q&A sections
+  const qaPatterns = [
+    /Question:[^]*?Answer:[^]*?\n/gi,
+    /Q:[^]*?A:[^]*?\n/gi,
+    /<div[^>]*>Question:[^]*?<\/div>/gi,
+    /<div[^>]*>Answer:[^]*?<\/div>/gi,
+  ];
+  qaPatterns.forEach(regex => {
+    cleaned = cleaned.replace(regex, '');
+  });
+  
+  // 5. Remove descriptive content before "Important Dates"
+  const importantDatesIndex = cleaned.toLowerCase().indexOf('important dates');
+  if (importantDatesIndex > 0) {
+    // Keep only from "Important Dates" onwards
+    cleaned = cleaned.substring(importantDatesIndex);
+  }
+  
+  // 6. Remove empty lines and extra whitespace
+  cleaned = cleaned.replace(/\n\s*\n/g, '\n');
+  cleaned = cleaned.trim();
+  
+  return cleaned;
+};
+
 // Clean FAQs About CEE Result 2026 box from all jobs dynamically
 async function cleanAllJobsCEEFAQ() {
+  // Use the comprehensive cleaning function
   const cleanHtmlContent = (html: string) => {
-    if (!html) return html;
-    
-    // Broad matching for divs containing CEE FAQs
-    const regexEscaped = /<div class=\\"overflow-x-auto w-full max-w-full my-6\\">[^]*?<table[^]*?>[^]*?FAQs About CEE Result 2026[^]*?<\/table>[^]*?<\/div>/gi;
-    const regexNormal = /<div class="overflow-x-auto w-full max-w-full my-6">[^]*?<table[^]*?>[^]*?FAQs About CEE Result 2026[^]*?<\/table>[^]*?<\/div>/gi;
-    const regexTableEscaped = /<table[^]*?>[^]*?FAQs About CEE Result 2026[^]*?<\/table>/gi;
-    const regexTableNormal = /<table[^]*?>[^]*?FAQs About CEE Result 2026[^]*?<\/table>/gi;
-
-    let cleaned = html.replace(regexEscaped, '');
-    cleaned = cleaned.replace(regexNormal, '');
-    cleaned = cleaned.replace(regexTableEscaped, '');
-    cleaned = cleaned.replace(regexTableNormal, '');
-    
-    return cleaned;
+    return cleanJobContent(html);
   };
 
   // 1. Clean Local Cache first
@@ -885,6 +942,90 @@ async function startServer() {
 
   const app = express();
   const PORT = 3000;
+
+  // Helper to remove forbidden links, table rows, list items or phrases from job content
+  const sanitizePostContent = (html: string): string => {
+      if (!html) return '';
+      try {
+          const $ = cheerio.load(html, null, false);
+
+          // 1. Remove social media links (Telegram, WhatsApp)
+          $("a").each((i, el) => {
+              const $el = $(el);
+              const href = $el.attr("href") || "";
+              const text = $el.text().trim();
+              
+              if (/t\.me|telegram\.me|whatsapp\.com|whatsapp\.channel/i.test(href) ||
+                  /telegram|whatsapp/i.test(text)) {
+                  $el.remove();
+              }
+          });
+
+          // 2. Remove app store links
+          $("a").each((i, el) => {
+              const $el = $(el);
+              const href = $el.attr("href") || "";
+              
+              if (/play\.google\.com|apps\.apple\.com/i.test(href)) {
+                  $el.remove();
+              }
+          });
+
+          // 3. Remove branding/disclaimer text
+          $("*").each((i, el) => {
+              const $el = $(el);
+              const text = $el.text().trim();
+              
+              if (/Official Website of ™️\.com\.cm|Since 2009|Trademark Applications|Controller General of Patents|Application Nos\./i.test(text) ||
+                  /Disclaimer:[^]*?examinees[^]*?legal document/i.test(text) ||
+                  /While every effort has been made[^]*?not responsible/i.test(text) ||
+                  /team to ensure the accuracy/i.test(text) ||
+                  /sarkariresult\.com\.cm|Sarkari Result|SarkariNaukri/i.test(text)) {
+                  $el.remove();
+              }
+          });
+
+          // 4. Remove Q&A sections
+          $("*").each((i, el) => {
+              const $el = $(el);
+              const text = $el.text().trim();
+              const tagName = ($(el).prop("tagName") || "").toUpperCase();
+              
+              if (["TR", "LI", "P", "H1", "H2", "H3", "H4", "H5", "H6", "DIV"].includes(tagName)) {
+                  const isQA = /^(Question|Answer)\s*:/i.test(text) || 
+                               (text.includes("Question:") && text.includes("Answer:") && text.length < 500);
+                  
+                  if (isQA) {
+                      $el.remove();
+                  }
+              }
+          });
+
+          // 5. Remove descriptive content before "Important Dates"
+          let importantDatesNode: any = null;
+          $('*').each((i, el) => {
+              const text = $(el).text().trim().toLowerCase();
+              if (text === 'important dates' || text === 'important date') {
+                  importantDatesNode = $(el);
+                  return false; // Stop iteration
+              }
+          });
+
+          if (importantDatesNode) {
+              // Remove all siblings before the Important Dates node
+              importantDatesNode.prevAll().remove();
+              // Also remove any text nodes before it
+              importantDatesNode.parent().contents().filter(function(this: any) {
+                  return this.type === 'text' && $(this).prevAll().length === 0;
+              }).remove();
+          }
+
+          return $.html().trim();
+      } catch (e) {
+          console.error('[SANITIZER] Error in sanitizePostContent:', e);
+          return html;
+      }
+  };
 
   // Serve dynamic firebase config for service worker
   app.get("/api/firebase-config.js", (req, res) => {
@@ -1092,160 +1233,61 @@ async function startServer() {
     }
   });
 
-  // Helper to remove forbidden links, table rows, list items or phrases from job content
-  const sanitizePostContent = (html: string): string => {
-      if (!html) return '';
+  // Dynamic Sitemap Generator
+  app.get("/sitemap.xml", async (req, res) => {
       try {
-          const $ = cheerio.load(html, null, false);
-
-          // Identify target elements to remove
-          $("*").each((i, el) => {
-              const $el = $(el);
-              const text = $el.text().trim();
-              const tagName = ($(el).prop("tagName") || "").toUpperCase();
-
-              // 1. Remove <a> tags if their href or text has unwanted things
-              if (tagName === "A") {
-                  const href = $el.attr("href") || "";
-                  if (
-                      /com\.vinod|sarkarinaukri|com\.cm|vocab|play\.google\.com|telegram|whatsapp|t\.me/i.test(href) ||
-                      /vocab|english\s+vocab|sarkarinaukri|com\.cm|com\.vinod|telegram|whatsapp/i.test(text)
-                  ) {
-                      $el.remove();
-                      return;
-                  }
-              }
-
-              // 2. Remove table rows (tr) or list items (li) or paragraphs (p) or headings (h1-h6) or divs if they are the direct holder of Q&A
-              if (["TR", "LI", "P", "H1", "H2", "H3", "H4", "H5", "H6", "DIV"].includes(tagName)) {
-                  const isQA = /^(Question|Answer)\s*:/i.test(text) || 
-                               (text.includes("Question:") && text.includes("Answer:") && text.length < 500);
-                  
-                  if (isQA) {
-                      $el.remove();
-                      return;
-                  }
-              }
-
-              // 3. Remove Disclaimer paragraphs or small blocks (restrict to P, DIV of length < 1500)
-              if (["P", "DIV"].includes(tagName) && text.length < 1500) {
-                  if (
-                      text.includes("Disclaimer:") && 
-                      (text.includes("legal document") || text.includes("immediate information") || text.includes("inadvertent errors"))
-                  ) {
-                      $el.remove();
-                      return;
-                  }
-              }
-
-              // 4. Remove Trademark blocks
-              if (["P", "DIV"].includes(tagName) && text.length < 1000) {
-                  if (
-                      text.includes("Official Website of") && 
-                      (text.includes("Trademark") || text.includes("Patent") || text.includes("Since 2009"))
-                  ) {
-                      $el.remove();
-                      return;
-                  }
-              }
-
-              // 5. Footer and social/app promotion elements
-              if (["P", "DIV", "SPAN"].includes(tagName) && text.length < 500) {
-                  if (text.includes("Copyright ©") || text.includes("™ ( Since 2009 )")) {
-                      $el.remove();
-                      return;
-                  }
-                  if (text.includes("Home Contact Privacy Policy Disclaimer")) {
-                      $el.remove();
-                      return;
-                  }
-                  if (text.includes("Connect With Us") || text.includes("@Telegram") || text.includes("@WhatsApp")) {
-                      $el.remove();
-                      return;
-                  }
-                  if (text.includes("Search for:") || text.includes("Search …")) {
-                      $el.remove();
-                      return;
-                  }
-                  if (
-                      text.includes("Download English Vocab App") || 
-                      text.includes("Download SarkariResult App") ||
-                      text.includes("English Vocab App") ||
-                      text.includes("Vocab App")
-                  ) {
-                      $el.remove();
-                      return;
-                  }
-              }
-
-              // 6. Clean up "Latest Posts", "Related Posts", and "Com.Cm" sections
-              if (["H1", "H2", "H3", "H4", "H5", "H6", "P", "DIV", "SPAN", "TD", "TH", "STRONG", "B"].includes(tagName)) {
-                  if (/Latest\s+Posts?/i.test(text) || /Related\s+Posts?/i.test(text)) {
-                      if (text.length < 50) {
-                          const table = $el.closest("table");
-                          if (table.length) {
-                              table.remove();
-                          } else {
-                              $el.remove();
-                          }
-                          return;
-                      }
-                  }
-                  if (/com\.cm/i.test(text)) {
-                      if (text.length < 100) {
-                          $el.remove();
-                          return;
-                      }
-                  }
-              }
-          });
-
-          // 6. Slice content to start exactly from "Important Dates" heading
-          let importantDatesNode: any = null;
-          $('*').each((i, el) => {
-              const text = $(el).text().trim().toLowerCase();
-              if (text === 'important dates' || text === 'important date') {
-                  const tagName = ((el as any).tagName || '').toUpperCase();
-                  if (['H1','H2','H3','H4','H5','H6','STRONG','B'].includes(tagName)) {
-                      importantDatesNode = el;
-                      return false; // break
-                  }
-              }
-          });
-
-          if (!importantDatesNode) {
-              $('*').each((i, el) => {
-                  const text = $(el).text().trim().toLowerCase();
-                  if (text.includes('important dates') && ['H1','H2','H3','H4','H5','H6'].includes(((el as any).tagName || '').toUpperCase())) {
-                      importantDatesNode = el;
-                      return false; // break
-                  }
-              });
-          }
-
-          if (importantDatesNode) {
-              let current = $(importantDatesNode);
-              while (current.length && current[0].name && !['body', 'html', 'root'].includes(current[0].name.toLowerCase())) {
-                  current.prevAll().remove();
-                  current = current.parent();
-              }
-          }
-
-          let cleaned = $.html();
+          res.header("Content-Type", "application/xml");
           
-          // Final cleanups of empty tags
-          cleaned = cleaned
-              .replace(/<a>\s*<\/a>/gi, "")
-              .replace(/<p>\s*<\/p>/gi, "")
-              .replace(/<li>\s*<\/li>/gi, "")
-              .replace(/<div>\s*<\/div>/gi, "");
-
-          return cleaned.trim();
-      } catch (e) {
-          console.error('[SANITIZER] Error in sanitizePostContent:', e);
-          return html;
+          const baseUrl = "https://govexamnotification.online";
+          let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`;
+          
+          // Add homepage
+          xml += `
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>`;
+          
+          // Add category pages
+          const categories = ['latest-jobs', 'admit-card', 'result', 'answer-key', 'syllabus', 'admission', 'calendar', 'documents'];
+          categories.forEach(cat => {
+              xml += `
+  <url>
+    <loc>${baseUrl}/${cat}/</loc>
+    <lastmod>${new Date().toISOString()}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>`;
+          });
+          
+          // Add job URLs from cache
+          const keys = Array.from(serverCache.keys()).filter(k => k.startsWith('jobs_'));
+          for (const key of keys) {
+              const job = serverCache.get(key);
+              if (job && job.path) {
+                  const lastmod = job.updatedAt || job.createdAt || new Date().toISOString();
+                  xml += `
+  <url>
+    <loc>${baseUrl}${job.path}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>`;
+              }
+          }
+          
+          xml += `
+</urlset>`;
+          
+          res.send(xml);
+      } catch (error) {
+          console.error('[SITEMAP] Error:', error);
+          res.status(500).json({ success: false, error: "Failed to generate sitemap" });
       }
-  };
+  });
 
   // Helper to determine job category from title and path
   const determineJobCategory = (title: string, path: string): string => {
@@ -2438,6 +2480,7 @@ async function startServer() {
           if (!cleanContent || cleanContent.trim() === '') {
               cleanContent = generateHtmlFromStructuredData(data);
           }
+          cleanContent = sanitizePostContent(cleanContent);
           let cleanTitle = data.title || '';
 
           if (cleanContent) {
@@ -2447,7 +2490,6 @@ async function startServer() {
                   .replace(/Sarkari\s*Result/gi, '')
                   .replace(/SarkariResult/gi, '')
                   .replace(/\(\s*\)/g, '');
-              cleanContent = sanitizePostContent(cleanContent);
           }
 
           if (cleanTitle) {
