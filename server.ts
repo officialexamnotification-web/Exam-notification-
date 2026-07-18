@@ -2480,7 +2480,13 @@ async function startServer() {
           if (!cleanContent || cleanContent.trim() === '') {
               cleanContent = generateHtmlFromStructuredData(data);
           }
-          cleanContent = sanitizePostContent(cleanContent);
+          
+          // Apply content cleaning but keep original if cleaning removes everything
+          const sanitizedContent = sanitizePostContent(cleanContent);
+          if (sanitizedContent && sanitizedContent.trim().length > 50) {
+              cleanContent = sanitizedContent;
+          }
+          
           let cleanTitle = data.title || '';
 
           if (cleanContent) {
