@@ -959,6 +959,7 @@ async function startServer() {
 
           // Find and extract only the specific sections
           let resultHtml = '';
+          let foundSections: string[] = [];
           
           sectionPatterns.forEach(({ pattern, name }) => {
               // Find elements that match the pattern
@@ -970,8 +971,9 @@ async function startServer() {
                   // Only check headings
                   if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'b'].includes(tagName)) {
                       // Check if this heading matches our pattern
-                      if (pattern.test(text)) {
+                      if (pattern.test(text) && !foundSections.includes(name)) {
                           console.log('[SANITIZER] Found section:', text, 'matching pattern:', name);
+                          foundSections.push(name);
                           
                           // Extract this section and all following content until next heading
                           let sectionContent = $el.clone();
@@ -983,12 +985,14 @@ async function startServer() {
                               nextElement = nextElement.next();
                           }
                           
-                          resultHtml += $.html(sectionContent);
+                          // Add section with proper spacing
+                          resultHtml += '<div class="section">' + $.html(sectionContent) + '</div>';
                       }
                   }
               });
           });
 
+          console.log('[SANITIZER] Found sections:', foundSections.join(', '));
           console.log('[SANITIZER] Result content length:', resultHtml.length);
           
           if (resultHtml.trim().length > 10) {
