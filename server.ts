@@ -949,12 +949,11 @@ async function startServer() {
       try {
           const $ = cheerio.load(html, null, false);
 
-          // Define section patterns to keep (more flexible matching)
+          // Define section patterns to keep (working sections only)
           const sectionPatterns = [
               { pattern: /important\s+dates/i, name: 'important dates' },
               { pattern: /application\s+fee/i, name: 'application fee' },
-              { pattern: /various\s+post/i, name: 'various post' },
-              { pattern: /useful\s+links/i, name: 'useful links' }
+              { pattern: /post/i, name: 'various post' }
           ];
 
           // Find and extract only the specific sections with all their content including links
@@ -978,12 +977,37 @@ async function startServer() {
                           // Extract this section and all following content until next heading
                           let sectionContent = $el.clone();
                           let nextElement = $el.next();
+                          let elementCount = 0;
+                          const maxElements = 100; // Standard limit for all sections
                           
                           while (nextElement.length && 
-                                 !['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(nextElement[0].tagName.toLowerCase())) {
+                                 !['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(nextElement[0].tagName.toLowerCase()) &&
+                                 elementCount < maxElements) {
+                              // Stop if we hit unwanted content patterns
+                              const nextText = nextElement.text().trim().toLowerCase();
+                              const stopPatterns = [
+                                  'question:', 
+                                  'answer:', 
+                                  'latest posts', 
+                                  'related posts', 
+                                  'disclaimer', 
+                                  'official website of sarkari',
+                                  'sarkari result',
+                                  'trademark applications',
+                                  'since 2009',
+                                  'controller general of patents'
+                              ];
+                              const shouldStop = stopPatterns.some(pattern => nextText.includes(pattern));
+                              
+                              if (shouldStop) {
+                                  console.log('[SANITIZER] Stopping section at:', nextText.substring(0, 50));
+                                  break;
+                              }
+                              
                               // Clone and add all content including links
                               sectionContent = sectionContent.add(nextElement.clone());
                               nextElement = nextElement.next();
+                              elementCount++;
                           }
                           
                           // Add section with proper spacing, preserving all links
