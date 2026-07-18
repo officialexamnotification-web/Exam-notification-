@@ -949,76 +949,51 @@ async function startServer() {
       try {
           const $ = cheerio.load(html, null, false);
 
-          // 1. Remove social media links (Telegram, WhatsApp)
-          $("a").each((i, el) => {
-              const $el = $(el);
-              const href = $el.attr("href") || "";
-              const text = $el.text().trim();
-              
-              if (/t\.me|telegram\.me|whatsapp\.com|whatsapp\.channel/i.test(href) ||
-                  /telegram|whatsapp/i.test(text)) {
-                  $el.remove();
-              }
-          });
+          // Define sections to keep
+          const sectionsToKeep = [
+              'important dates',
+              'application fee',
+              'various post',
+              'useful links',
+              'important date',
+              'application fees',
+              'various posts',
+              'useful link'
+          ];
 
-          // 2. Remove app store links
-          $("a").each((i, el) => {
+          // Find all headings and their content
+          const sections: any[] = [];
+          $('h1, h2, h3, h4, h5, h6, strong, b').each((i, el) => {
               const $el = $(el);
-              const href = $el.attr("href") || "";
+              const text = $el.text().trim().toLowerCase();
               
-              if (/play\.google\.com|apps\.apple\.com/i.test(href)) {
-                  $el.remove();
-              }
-          });
-
-          // 3. Remove branding/disclaimer text
-          $("*").each((i, el) => {
-              const $el = $(el);
-              const text = $el.text().trim();
+              // Check if this is a section we want to keep
+              const isSectionToKeep = sectionsToKeep.some(section => text.includes(section));
               
-              if (/Official Website of ™️\.com\.cm|Since 2009|Trademark Applications|Controller General of Patents|Application Nos\./i.test(text) ||
-                  /Disclaimer:[^]*?examinees[^]*?legal document/i.test(text) ||
-                  /While every effort has been made[^]*?not responsible/i.test(text) ||
-                  /team to ensure the accuracy/i.test(text) ||
-                  /sarkariresult\.com\.cm|Sarkari Result|SarkariNaukri/i.test(text)) {
-                  $el.remove();
-              }
-          });
-
-          // 4. Remove Q&A sections
-          $("*").each((i, el) => {
-              const $el = $(el);
-              const text = $el.text().trim();
-              const tagName = ($(el).prop("tagName") || "").toUpperCase();
-              
-              if (["TR", "LI", "P", "H1", "H2", "H3", "H4", "H5", "H6", "DIV"].includes(tagName)) {
-                  const isQA = /^(Question|Answer)\s*:/i.test(text) || 
-                               (text.includes("Question:") && text.includes("Answer:") && text.length < 500);
+              if (isSectionToKeep) {
+                  // Collect this section and all following elements until next heading
+                  let sectionContent = $el.clone();
+                  let nextElement = $el.next();
                   
-                  if (isQA) {
-                      $el.remove();
+                  while (nextElement.length && !['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(nextElement[0].tagName.toLowerCase())) {
+                      sectionContent = sectionContent.add(nextElement.clone());
+                      nextElement = nextElement.next();
                   }
+                  
+                  sections.push({
+                      heading: $el,
+                      content: sectionContent
+                  });
               }
           });
 
-          // 5. Remove descriptive content before "Important Dates"
-          let importantDatesNode: any = null;
-          $('*').each((i, el) => {
-              const text = $(el).text().trim().toLowerCase();
-              if (text === 'important dates' || text === 'important date') {
-                  importantDatesNode = $(el);
-                  return false; // Stop iteration
-              }
-          });
+          // Remove everything from the body
+          $('body').empty();
 
-          if (importantDatesNode) {
-              // Remove all siblings before the Important Dates node
-              importantDatesNode.prevAll().remove();
-              // Also remove any text nodes before it
-              importantDatesNode.parent().contents().filter(function(this: any) {
-                  return this.type === 'text' && $(this).prevAll().length === 0;
-              }).remove();
-          }
+          // Add back only the sections we want to keep
+          sections.forEach(section => {
+              $('body').append(section.content);
+          });
 
           return $.html().trim();
       } catch (e) {
