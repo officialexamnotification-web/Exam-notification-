@@ -621,14 +621,28 @@ let db: any = null;
 let config: any = null;
 
 function isFirebaseConfigValid(cfg: any) {
-  // Force local CACHE-ONLY mode using only govexam_db.json as the Source of Truth
-  return false;
+  // Check if Firebase config is valid
+  return cfg && cfg.apiKey && cfg.projectId && cfg.authDomain;
 }
 
 try {
-  console.log('[FIREBASE] Operating strictly in local CACHE-ONLY mode. Firestore is completely disconnected/bypassed. Website data source is strictly govexam_db.json.');
+  const firebaseConfig = {
+    apiKey: process.env.VITE_FIREBASE_API_KEY,
+    authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.VITE_FIREBASE_APP_ID
+  };
+  
+  if (isFirebaseConfigValid(firebaseConfig)) {
+    config = firebaseConfig;
+    console.log('[FIREBASE] Firebase configuration loaded successfully');
+  } else {
+    console.log('[FIREBASE] Firebase config invalid, using local cache mode');
+  }
 } catch (e: any) {
-  console.error('[FIREBASE] Firebase initialization bypassed with error:', e);
+  console.error('[FIREBASE] Firebase initialization error:', e);
 }
 
 // Clean FAQs About CEE Result 2026 box from all jobs dynamically
@@ -698,7 +712,9 @@ async function cleanAllJobsCEEFAQ() {
 
   try {
     const jobsCol = collection(db, 'jobs');
-    const snapshot = await getDocs(jobsCol);
+    // Add limit to prevent data exhaustion - fetch only 500 jobs at a time
+    const limitedQuery = firebaseQuery(jobsCol).limit(500);
+    const snapshot = await getDocs(limitedQuery);
     console.log(`[FIREBASE_CLEAN] Scanning ${snapshot.docs.length} Firestore jobs for CEE FAQs...`);
     
     let firestoreCleanedCount = 0;
@@ -924,7 +940,8 @@ async function startServer() {
       // Fetch all jobs from Firestore for complete sitemap if database is available
       if (db) {
         try {
-          const jobsQuery = firebaseQuery(collection(db, 'jobs'));
+          // Add limit to prevent data exhaustion - fetch only 1000 jobs for sitemap
+          const jobsQuery = firebaseQuery(collection(db, 'jobs')).limit(1000);
           const querySnapshot = await getDocs(jobsQuery);
           querySnapshot.forEach((doc) => {
             const jobData = doc.data();
@@ -2397,7 +2414,9 @@ async function startServer() {
       if (db) {
         const result = await safeFirestoreOp(async () => {
           const jobsCol = collection(db, 'jobs');
-          const snapshot = await getDocs(jobsCol);
+          // Add limit to prevent data exhaustion - fetch only 1000 jobs for admin panel
+          const limitedQuery = firebaseQuery(jobsCol).limit(1000);
+          const snapshot = await getDocs(limitedQuery);
           console.log(`[ADMIN JOBS] Found ${snapshot.docs.length} jobs in Firestore`);
           return snapshot.docs.map(d => {
             const data = d.data();
@@ -3689,8 +3708,8 @@ Return ONLY the JSON. Do not wrap in markdown tags or add any conversational tex
       
       console.log('[REBUILD] Starting home_data rebuild...');
       
-      // 1. Fetch ALL jobs
-      const jobsQuery = firebaseQuery(collection(db, 'jobs'));
+      // 1. Fetch ALL jobs with limit to prevent data exhaustion
+      const jobsQuery = firebaseQuery(collection(db, 'jobs')).limit(2000);
       const jobsSnapshot = await getDocs(jobsQuery);
       
       const allJobs: any[] = [];

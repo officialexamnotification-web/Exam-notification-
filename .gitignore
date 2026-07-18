@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+cache.json
+govexam_db.json
+govexam_db_backup.json
