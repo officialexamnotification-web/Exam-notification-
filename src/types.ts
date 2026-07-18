@@ -5,6 +5,7 @@ export interface LinkItem {
   isNew?: boolean;
   isOut?: boolean;
   path?: string;
+  postCount?: string;
 }
 
 export interface Category {

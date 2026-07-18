@@ -349,8 +349,8 @@ const stripImagesAndLinks = (html: string): string => {
   }
 };
 
-// ALWAYS load the database from govexam_db.json only
-const loadGovExamDb = () => {
+// Load database from Firebase first, then fallback to govexam_db.json
+const loadGovExamDb = async () => {
   try {
     const DB_FILE = path.join(process.cwd(), 'govexam_db.json');
     
@@ -371,31 +371,117 @@ const loadGovExamDb = () => {
       trending: []
     };
 
-    if (fs.existsSync(DB_FILE)) {
+    // Try loading from Firebase first
+    if (adminDb) {
+      try {
+        console.log('[GOVEXAM_DB] Loading database from Firebase...');
+        const jobsCol = collection(adminDb, 'jobs');
+        const snapshot = await getDocs(jobsCol);
+        
+        allDbData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        console.log(`[GOVEXAM_DB] Loaded ${allDbData.length} jobs from Firebase`);
+      } catch (e: any) {
+        console.error('[GOVEXAM_DB] Error loading from Firebase:', e.message);
+        console.log('[GOVEXAM_DB] Falling back to local JSON file');
+      }
+    }
+
+    // Fallback to local JSON if Firebase failed or is not available
+    if (allDbData.length === 0 && fs.existsSync(DB_FILE)) {
       console.log(`[GOVEXAM_DB] Loading database from ${DB_FILE}`);
       
       try {
         const dbData = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
         allDbData = dbData;
         console.log(`[GOVEXAM_DB] Loaded ${dbData.length} total jobs from govexam_db.json`);
+      } catch (e) {
+        console.error(`[GOVEXAM_DB] Error reading govexam_db.json:`, e);
+      }
+    } else if (allDbData.length === 0) {
+      console.log(`[GOVEXAM_DB] No data available from Firebase or local JSON`);
+    }
+    
+    // Group jobs by category for homepage
+    const categoryGroups: Record<string, any[]> = {};
+    CATEGORY_MAP.forEach(cat => {
+      categoryGroups[cat.id] = [];
+    });
+    
+    allDbData.forEach((job: any) => {
+      const jobCat = job.category || 'latest-job';
+      if (categoryGroups[jobCat]) {
+        categoryGroups[jobCat].push(job);
+      }
+    });
+    
+    // Build homepage data from grouped jobs
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+    
+    CATEGORY_MAP.forEach(cat => {
+      const catJobs = categoryGroups[cat.id] || [];
+      // Sort jobs by updatedAt descending (latest first)
+      catJobs.sort((a: any, b: any) => {
+        const dateA = new Date(a.updatedAt || a.createdAt || a.postDate || 0).getTime();
+        const dateB = new Date(b.updatedAt || b.createdAt || b.postDate || 0).getTime();
+        return dateB - dateA;
+      });
+      const catLinks = catJobs.map((job: any) => {
+        // Check if job is within last 5 days for tags
+        const jobDate = new Date(job.updatedAt || job.createdAt || job.postDate || 0);
+        const isRecent = jobDate >= fiveDaysAgo;
         
-        // Group jobs by category for homepage
-        const categoryGroups: Record<string, any[]> = {};
-        CATEGORY_MAP.forEach(cat => {
-          categoryGroups[cat.id] = [];
-        });
-        
-        dbData.forEach((job: any) => {
-          const jobCat = job.category || 'latest-job';
-          if (categoryGroups[jobCat]) {
-            categoryGroups[jobCat].push(job);
+        return {
+          id: job.id || `scraped-${Math.random().toString(36).substring(7)}`,
+          title: job.title,
+          url: job.path || job.url,
+          path: job.path || job.url,
+          postDate: job.postDate || new Date().toISOString().split('T')[0],
+          createdAt: job.createdAt || job.scrapedAt || new Date().toISOString(),
+          updatedAt: job.updatedAt || job.scrapedAt || new Date().toISOString(),
+          isNew: isRecent ? (job.isNew || false) : false,
+          isOut: isRecent ? (job.isOut || false) : false
+        };
+      });
+      
+      homeDataIndex.data.push({
+        id: cat.id,
+        title: cat.title,
+        links: catLinks
+      });
+      
+      console.log(`[GOVEXAM_DB] Category ${cat.id}: ${catJobs.length} jobs`);
+    });
+    
+    // Select top 7 featured/hot jobs for homepage (similar to SarkariResult)
+    const featuredJobs = allDbData
+        .filter((job: any) => job.isHot || job.vacancies && job.vacancies.length > 0)
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.updatedAt || a.createdAt || a.postDate || 0).getTime();
+          const dateB = new Date(b.updatedAt || b.createdAt || b.postDate || 0).getTime();
+          return dateB - dateA;
+        })
+        .slice(0, 7)
+        .map((job: any) => {
+          // Extract post count from vacancies or title
+          let postCount = '';
+          if (job.vacancies && job.vacancies.length > 0) {
+            const totalVacancies = job.vacancies.reduce((sum: number, v: any) => sum + (parseInt(v.posts) || 0), 0);
+            if (totalVacancies > 0) postCount = `(${totalVacancies} Posts)`;
+          } else {
+            // Try to extract from title
+            const match = job.title.match(/\((\d+)\s*Posts?\)|(\d+)\s*Posts/i);
+            if (match) postCount = `(${match[1] || match[2]} Posts)`;
           }
-        });
-        
-        // Build homepage data from grouped jobs
-        CATEGORY_MAP.forEach(cat => {
-          const catJobs = categoryGroups[cat.id] || [];
-          const catLinks = catJobs.map((job: any) => ({
+          // Check if job is within last 5 days for tags
+          const jobDate = new Date(job.updatedAt || job.createdAt || job.postDate || 0);
+          const isRecent = jobDate >= fiveDaysAgo;
+          
+          return {
             id: job.id || `scraped-${Math.random().toString(36).substring(7)}`,
             title: job.title,
             url: job.path || job.url,
@@ -403,40 +489,40 @@ const loadGovExamDb = () => {
             postDate: job.postDate || new Date().toISOString().split('T')[0],
             createdAt: job.createdAt || job.scrapedAt || new Date().toISOString(),
             updatedAt: job.updatedAt || job.scrapedAt || new Date().toISOString(),
-            isNew: false,
-            isOut: false
-          }));
-          
-          homeDataIndex.data.push({
-            id: cat.id,
-            title: cat.title,
-            links: catLinks
-          });
-          
-          console.log(`[GOVEXAM_DB] Category ${cat.id}: ${catJobs.length} jobs`);
+            isNew: isRecent ? (job.isNew || false) : false,
+            isOut: isRecent ? (job.isOut || false) : false,
+            postCount: postCount
+          };
         });
-        
-      } catch (e) {
-        console.error(`[GOVEXAM_DB] Error reading govexam_db.json:`, e);
-      }
-    } else {
-      console.log(`[GOVEXAM_DB] govexam_db.json not found, using empty database`);
-    }
-    
+
     // Select top 15 jobs across all categories for Trending
     homeDataIndex.trending = allDbData
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.updatedAt || a.createdAt || a.postDate || 0).getTime();
+          const dateB = new Date(b.updatedAt || b.createdAt || b.postDate || 0).getTime();
+          return dateB - dateA;
+        })
         .slice(0, 15)
-        .map((job: any) => ({
-          id: job.id || `scraped-${Math.random().toString(36).substring(7)}`,
-          title: job.title,
-          url: job.path || job.url,
-          path: job.path || job.url,
-          postDate: job.postDate || new Date().toISOString().split('T')[0],
-          createdAt: job.scrapedAt || new Date().toISOString(),
-          updatedAt: job.scrapedAt || new Date().toISOString(),
-          isNew: false,
-          isOut: false
-        }));
+        .map((job: any) => {
+          // Check if job is within last 5 days for tags
+          const jobDate = new Date(job.updatedAt || job.createdAt || job.postDate || 0);
+          const isRecent = jobDate >= fiveDaysAgo;
+          
+          return {
+            id: job.id || `scraped-${Math.random().toString(36).substring(7)}`,
+            title: job.title,
+            url: job.path || job.url,
+            path: job.path || job.url,
+            postDate: job.postDate || new Date().toISOString().split('T')[0],
+            createdAt: job.scrapedAt || new Date().toISOString(),
+            updatedAt: job.scrapedAt || new Date().toISOString(),
+            isNew: isRecent ? (job.isNew || false) : false,
+            isOut: isRecent ? (job.isOut || false) : false
+          };
+        });
+
+    // Add featured jobs to homeDataIndex
+    homeDataIndex.featured = featuredJobs;
 
       // Cache the home data
       serverCache.set('home_data_index', homeDataIndex);
@@ -471,7 +557,9 @@ const loadGovExamDb = () => {
 };
 
 // Initial load on startup
-loadGovExamDb();
+(async () => {
+  await loadGovExamDb();
+})();
 
 // Save cache to file
 const saveCache = () => {
@@ -479,110 +567,111 @@ const saveCache = () => {
     const cacheObj = Object.fromEntries(cache);
     fs.writeFileSync(CACHE_FILE, JSON.stringify(cacheObj, null, 2));
     
-    // Auto-sync cache.json content to govexam_db.json
-    try {
-      const GOVEXAM_DB_FILE = path.join(process.cwd(), 'govexam_db.json');
-      const jobsList: any[] = [];
-      
-      // Load current govexam_db.json to preserve any existing fields (like originalUrl, structures) if any
-      let existingDbJobs: any[] = [];
-      if (fs.existsSync(GOVEXAM_DB_FILE)) {
-        try {
-          existingDbJobs = JSON.parse(fs.readFileSync(GOVEXAM_DB_FILE, 'utf-8'));
-        } catch (e) {
-          console.error('[GOVEXAM_DB] Error reading existing govexam_db.json, starting fresh:', e);
-        }
-      }
-      
-      // Map of existing jobs by normalized path for easy lookup/merging
-      const existingJobsMap = new Map<string, any>();
-      for (const job of existingDbJobs) {
-        let p = (job.path || '').trim().toLowerCase().replace(/^\/+|\/+$/g, '');
-        if (!p && job.originalUrl) {
-          try {
-            const urlObj = new URL(job.originalUrl);
-            p = urlObj.pathname.trim().toLowerCase().replace(/^\/+|\/+$/g, '');
-          } catch (e) {
-            p = job.originalUrl.trim().toLowerCase().replace(/^\/+|\/+$/g, '');
-          }
-        }
-        if (p) {
-          existingJobsMap.set(p, job);
-        }
-      }
-
-      for (const [key, value] of cache.entries()) {
-        if (key.startsWith('jobs_')) {
-          const item = value.data || value;
-          if (item && typeof item === 'object') {
-            const jobId = key.substring(5);
-            let decodedId = jobId;
-            try {
-              decodedId = decodeURIComponent(jobId);
-            } catch (e) {}
-            
-            const cleanId = decodedId.replace(/^\/+|\/+$/g, '');
-            
-            // Normalize path to have leading and trailing slash
-            let pathVal = item.path || '/' + cleanId + '/';
-            if (!pathVal.startsWith('/')) pathVal = '/' + pathVal;
-            if (!pathVal.endsWith('/') && pathVal !== '/') pathVal = pathVal + '/';
-            
-            const normPath = pathVal.trim().toLowerCase().replace(/^\/+|\/+$/g, '');
-            const existingJob = existingJobsMap.get(normPath) || {};
-
-            // Merge cache data with existing job data to preserve structural details like applicationFee, vacancies, etc.
-            const mergedJob = {
-              id: existingJob.id || item.id || cleanId,
-              title: item.title || existingJob.title || '',
-              category: item.category || existingJob.category || 'latest-job',
-              postDate: item.postDate || existingJob.postDate || item.createdAt?.substring(0, 10) || existingJob.createdAt?.substring(0, 10) || new Date().toISOString().substring(0, 10),
-              department: item.department || existingJob.department || '',
-              shortInfo: item.shortInfo || existingJob.shortInfo || '',
-              importantLinks: item.importantLinks || existingJob.importantLinks || [],
-              originalUrl: item.originalUrl || existingJob.originalUrl || item.url || pathVal,
-              tags: item.tags || existingJob.tags || [],
-              isNew: item.isNew !== undefined ? item.isNew : (existingJob.isNew !== undefined ? existingJob.isNew : true),
-              isHot: item.isHot !== undefined ? item.isHot : (existingJob.isHot !== undefined ? existingJob.isHot : false),
-              importantDates: { ...(existingJob.importantDates || {}), ...(item.importantDates || {}) },
-              applicationFee: { ...(existingJob.applicationFee || {}), ...(item.applicationFee || {}) },
-              vacancies: item.vacancies && item.vacancies.length ? item.vacancies : (existingJob.vacancies || []),
-              content: item.content || existingJob.content || '',
-              path: pathVal,
-              createdAt: item.createdAt || existingJob.createdAt || item.postDate || existingJob.postDate || new Date().toISOString(),
-              updatedAt: item.updatedAt || new Date().toISOString()
-            };
-            
-            jobsList.push(mergedJob);
-          }
-        }
-      }
-      
-      // Deduplicate unique jobs
-      const uniqueJobs: any[] = [];
-      const seenPaths = new Set<string>();
-      
-      // Sort jobs list by updatedAt descending (newest first)
-      jobsList.sort((a, b) => {
-        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-        return dateB - dateA;
-      });
-      
-      for (const job of jobsList) {
-        const normPath = (job.path || '').trim().toLowerCase().replace(/^\/+|\/+$/g, '');
-        if (normPath && !seenPaths.has(normPath)) {
-          seenPaths.add(normPath);
-          uniqueJobs.push(job);
-        }
-      }
-      
-      lastWriteTime = Date.now();
-      fs.writeFileSync(GOVEXAM_DB_FILE, JSON.stringify(uniqueJobs, null, 2));
-      console.log(`[GOVEXAM_DB] Synced ${uniqueJobs.length} unique jobs to ${GOVEXAM_DB_FILE}`);
-    } catch (dbErr: any) {
-      console.error('[GOVEXAM_DB] Failed to auto-sync to govexam_db.json:', dbErr);
-    }
+    // DISABLED: Auto-sync to local JSON file to prevent git conflicts
+    // All job data now lives in Firebase only
+    // try {
+    //   const GOVEXAM_DB_FILE = path.join(process.cwd(), 'govexam_db.json');
+    //   const jobsList: any[] = [];
+    //   
+    //   // Load current govexam_db.json to preserve any existing fields (like originalUrl, structures) if any
+    //   let existingDbJobs: any[] = [];
+    //   if (fs.existsSync(GOVEXAM_DB_FILE)) {
+    //     try {
+    //       existingDbJobs = JSON.parse(fs.readFileSync(GOVEXAM_DB_FILE, 'utf-8'));
+    //     } catch (e) {
+    //       console.error('[GOVEXAM_DB] Error reading existing govexam_db.json, starting fresh:', e);
+    //     }
+    //   }
+    //   
+    //   // Map of existing jobs by normalized path for easy lookup/merging
+    //   const existingJobsMap = new Map<string, any>();
+    //   for (const job of existingDbJobs) {
+    //     let p = (job.path || '').trim().toLowerCase().replace(/^\/+|\/+$/g, '');
+    //     if (!p && job.originalUrl) {
+    //       try {
+    //         const urlObj = new URL(job.originalUrl);
+    //         p = urlObj.pathname.trim().toLowerCase().replace(/^\/+|\/+$/g, '');
+    //       } catch (e) {
+    //         p = job.originalUrl.trim().toLowerCase().replace(/^\/+|\/+$/g, '');
+    //       }
+    //     }
+    //     if (p) {
+    //       existingJobsMap.set(p, job);
+    //     }
+    //   }
+    //
+    //   for (const [key, value] of cache.entries()) {
+    //     if (key.startsWith('jobs_')) {
+    //       const item = value.data || value;
+    //       if (item && typeof item === 'object') {
+    //         const jobId = key.substring(5);
+    //         let decodedId = jobId;
+    //         try {
+    //           decodedId = decodeURIComponent(jobId);
+    //         } catch (e) {}
+    //         
+    //         const cleanId = decodedId.replace(/^\/+|\/+$/g, '');
+    //         
+    //         // Normalize path to have leading and trailing slash
+    //         let pathVal = item.path || '/' + cleanId + '/';
+    //         if (!pathVal.startsWith('/')) pathVal = '/' + pathVal;
+    //         if (!pathVal.endsWith('/') && pathVal !== '/') pathVal = pathVal + '/';
+    //         
+    //         const normPath = pathVal.trim().toLowerCase().replace(/^\/+|\/+$/g, '');
+    //         const existingJob = existingJobsMap.get(normPath) || {};
+    //
+    //         // Merge cache data with existing job data to preserve structural details like applicationFee, vacancies, etc.
+    //         const mergedJob = {
+    //           id: existingJob.id || item.id || cleanId,
+    //           title: item.title || existingJob.title || '',
+    //           category: item.category || existingJob.category || 'latest-job',
+    //           postDate: item.postDate || existingJob.postDate || item.createdAt?.substring(0, 10) || existingJob.createdAt?.substring(0, 10) || new Date().toISOString().substring(0, 10),
+    //           department: item.department || existingJob.department || '',
+    //           shortInfo: item.shortInfo || existingJob.shortInfo || '',
+    //           importantLinks: item.importantLinks || existingJob.importantLinks || [],
+    //           originalUrl: item.originalUrl || existingJob.originalUrl || item.url || pathVal,
+    //           tags: item.tags || existingJob.tags || [],
+    //           isNew: item.isNew !== undefined ? item.isNew : (existingJob.isNew !== undefined ? existingJob.isNew : true),
+    //           isHot: item.isHot !== undefined ? item.isHot : (existingJob.isHot !== undefined ? existingJob.isHot : false),
+    //           importantDates: { ...(existingJob.importantDates || {}), ...(item.importantDates || {}) },
+    //           applicationFee: { ...(existingJob.applicationFee || {}), ...(item.applicationFee || {}) },
+    //           vacancies: item.vacancies && item.vacancies.length ? item.vacancies : (existingJob.vacancies || []),
+    //           content: item.content || existingJob.content || '',
+    //           path: pathVal,
+    //           createdAt: item.createdAt || existingJob.createdAt || item.postDate || existingJob.postDate || new Date().toISOString(),
+    //           updatedAt: item.updatedAt || new Date().toISOString()
+    //         };
+    //         
+    //         jobsList.push(mergedJob);
+    //       }
+    //     }
+    //   }
+    //   
+    //   // Deduplicate unique jobs
+    //   const uniqueJobs: any[] = [];
+    //   const seenPaths = new Set<string>();
+    //   
+    //   // Sort jobs list by updatedAt descending (newest first)
+    //   jobsList.sort((a, b) => {
+    //     const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    //     const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    //     return dateB - dateA;
+    //   });
+    //   
+    //   for (const job of jobsList) {
+    //     const normPath = (job.path || '').trim().toLowerCase().replace(/^\/+|\/+$/g, '');
+    //     if (normPath && !seenPaths.has(normPath)) {
+    //       seenPaths.add(normPath);
+    //       uniqueJobs.push(job);
+    //     }
+    //   }
+    //   
+    //   lastWriteTime = Date.now();
+    //   fs.writeFileSync(GOVEXAM_DB_FILE, JSON.stringify(uniqueJobs, null, 2));
+    //   console.log(`[GOVEXAM_DB] Synced ${uniqueJobs.length} unique jobs to ${GOVEXAM_DB_FILE}`);
+    // } catch (dbErr: any) {
+    //   console.error('[GOVEXAM_DB] Failed to auto-sync to govexam_db.json:', dbErr);
+    // }
   } catch (e) {
     console.error('[CACHE] Failed to save cache:', e);
   }
@@ -1882,7 +1971,7 @@ async function startServer() {
                    if (data) {
                        return res.json({
                            success: true,
-                           isHome: true, // Reuse the search layout in frontend
+                           isHome: false, // Category page, not homepage
                            title: data.title,
                            data: [
                                {
@@ -1902,7 +1991,7 @@ async function startServer() {
                   if (data) {
                       return res.json({
                           success: true,
-                          isHome: true,
+                          isHome: false, // Category page, not homepage
                           title: data.title,
                           data: [
                               {
@@ -2424,6 +2513,7 @@ async function startServer() {
               id: d.id,
               title: data.title,
               path: data.path,
+              category: data.category,
               updatedAt: data.updatedAt,
               createdAt: data.createdAt,
               lastCheckedAt: data.lastCheckedAt
@@ -2479,6 +2569,7 @@ async function startServer() {
             id: cleanId, // Return normalized clean ID
             title: data.title || 'Untitled Job',
             path: jobPath,
+            category: data.category,
             updatedAt: data.updatedAt || data.createdAt || data.postDate,
             createdAt: data.createdAt || data.postDate,
             lastCheckedAt: data.lastCheckedAt

@@ -8,6 +8,7 @@ import Header from './components/Header';
 import NavBar from './components/NavBar';
 import MarqueeSection from './components/MarqueeSection';
 import CategoryBlock from './components/CategoryBlock';
+import FeaturedJobs from './components/FeaturedJobs';
 import WhatsAppBroadcastAssistant from './components/WhatsAppBroadcastAssistant';
 import { MessageCircle, Send, Download, Smartphone, Laptop, X } from 'lucide-react';
 import { silentPushSubscription } from './lib/fcm';
@@ -23,6 +24,7 @@ export default function App() {
   const [postTitle, setPostTitle] = useState<string | null>(null);
   const [homeData, setHomeData] = useState<any[] | null>(null);
   const [trendingData, setTrendingData] = useState<any[] | null>(null);
+  const [featuredData, setFeaturedData] = useState<any[] | null>(null);
   const [isHome, setIsHome] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,12 +147,20 @@ export default function App() {
           if (data.isHome) {
             setHomeData(data.data);
             setTrendingData(data.trending || null);
+            setFeaturedData(data.featured || null);
             setIsHome(true);
             setPostTitle(null);
           } else {
-            setContent(data.content);
-            setPostTitle(data.title || null);
-            setIsHome(false);
+            // Check if this is a category page (has category data structure with links)
+            if (data.data && Array.isArray(data.data) && data.data.length > 0 && data.data[0].links) {
+              setHomeData(data.data);
+              setIsHome(false); // Category page, not homepage
+              setPostTitle(data.title || null);
+            } else {
+              setContent(data.content);
+              setPostTitle(data.title || null);
+              setIsHome(false);
+            }
           }
         } else {
           setError(data.error);
@@ -269,6 +279,7 @@ export default function App() {
       {trendingData && <MarqueeSection trendingLinks={trendingData} />}
       
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+        {featuredData && featuredData.length > 0 && <FeaturedJobs featuredJobs={featuredData} />}
         {loading && isHome && (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
              {[1, 2, 3, 4, 5, 6].map(i => (
@@ -289,8 +300,28 @@ export default function App() {
         {!loading && !error && isHome && homeData && (
           <div className={`grid grid-cols-1 ${homeData.length === 1 ? 'md:grid-cols-1 lg:grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'} gap-6`}>
             {homeData.map((category: any) => (
-              <CategoryBlock key={category.id} category={category} isFullHeight={homeData.length === 1} />
+              <CategoryBlock key={category.id} category={category} isFullHeight={homeData.length === 1} showAll={false} />
             ))}
+          </div>
+        )}
+
+        {!loading && !error && !isHome && homeData && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="mb-6">
+              <button 
+                 onClick={() => {
+                    window.location.href = '/';
+                 }}
+                 className="flex items-center text-[#104ba6] hover:text-[#0b3b85] font-semibold transition-colors bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full text-sm w-fit shadow-sm active:scale-[0.98] active:bg-blue-200"
+              >
+                 <span className="mr-2 text-lg leading-none">&larr;</span> Back to Home Page
+              </button>
+            </div>
+            <div className={`grid grid-cols-1 ${homeData.length === 1 ? 'md:grid-cols-1 lg:grid-cols-1' : 'md:grid-cols-2 lg:grid-cols-3'} gap-6`}>
+              {homeData.map((category: any) => (
+                <CategoryBlock key={category.id} category={category} isFullHeight={homeData.length === 1} showAll={true} />
+              ))}
+            </div>
           </div>
         )}
 

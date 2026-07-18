@@ -6,9 +6,10 @@ interface CategoryBlockProps {
   category: Category;
   key?: React.Key;
   isFullHeight?: boolean;
+  showAll?: boolean; // If true, show all jobs instead of limiting
 }
 
-export default function CategoryBlock({ category, isFullHeight }: CategoryBlockProps) {
+export default function CategoryBlock({ category, isFullHeight, showAll }: CategoryBlockProps) {
   const handleViewAllClick = () => {
     // Generate proper category URL based on category title (matching sitemap URLs)
     let categoryPath = '';
@@ -29,16 +30,17 @@ export default function CategoryBlock({ category, isFullHeight }: CategoryBlockP
     }
   };
 
-  const displayLinks = category.links;
+  // Show all jobs if showAll is true, otherwise limit to 15 jobs for homepage display to enable scroll
+  const displayLinks = showAll ? category.links : category.links.slice(0, 15);
 
   return (
-    <div className={`bg-white border text-gray-800 border-gray-200 rounded shadow-sm flex flex-col h-auto`}>
+    <div className={`bg-white border text-gray-800 border-gray-200 rounded shadow-sm flex flex-col h-[500px]`}>
       <div className="bg-[#104ba6] px-4 py-3 flex items-center shadow-sm">
         <h3 className="font-extrabold text-white text-[17px] tracking-wide flex items-center uppercase drop-shadow-sm text-center w-full justify-center">
           {category.title}
         </h3>
       </div>
-      <ul className={`divide-none px-1 py-1 flex-1 category-scrollbar ${!isFullHeight ? 'h-[400px] overflow-y-auto' : ''}`}>
+      <ul className="divide-none px-1 py-1 flex-1 category-scrollbar h-[400px] overflow-y-auto">
         {displayLinks.length === 0 && (
           <li className="px-5 py-8 text-center text-gray-500 italic">No updates available currently.</li>
         )}
