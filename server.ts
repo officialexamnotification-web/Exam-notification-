@@ -2495,6 +2495,151 @@ async function startServer() {
     next();
   };
 
+  // Rebuild home_data from Firebase jobs
+  app.post("/api/admin/rebuild-home-data", verifyAdmin, async (req, res): Promise<any> => {
+    try {
+      console.log('[REBUILD] Starting home_data rebuild from Firebase jobs...');
+      
+      if (!adminDb) {
+        return res.status(400).json({ success: false, error: "Firebase not available" });
+      }
+
+      // Load all jobs from Firebase
+      const result = await safeFirestoreOp(async () => {
+        const jobsCol = collection(adminDb, 'jobs');
+        const snapshot = await getDocs(jobsCol);
+        return snapshot.docs.map(d => ({
+          id: d.id,
+          ...d.data()
+        }));
+      }, [], 'rebuild home_data jobs');
+      
+      if (!result.success) {
+        return res.status(500).json({ success: false, error: "Failed to load jobs from Firebase" });
+      }
+
+      const allDbData = result.value;
+      console.log(`[REBUILD] Loaded ${allDbData.length} jobs from Firebase`);
+
+      // Group jobs by category
+      const categoryGroups: Record<string, any[]> = {};
+      const CATEGORY_MAP = [
+        { id: 'result', title: 'Result' },
+        { id: 'admit-card', title: 'Admit Card' },
+        { id: 'latest-job', title: 'Latest Jobs' },
+        { id: 'answer-key', title: 'Answer Key' },
+        { id: 'syllabus', title: 'Syllabus' },
+        { id: 'admission', title: 'Admission' },
+        { id: 'calendar', title: 'Calendar' },
+        { id: 'documents', title: 'Documents' },
+      ];
+
+      CATEGORY_MAP.forEach(cat => {
+        categoryGroups[cat.id] = [];
+      });
+
+      allDbData.forEach((job: any) => {
+        const jobCat = job.category || 'latest-job';
+        if (categoryGroups[jobCat]) {
+          categoryGroups[jobCat].push(job);
+        }
+      });
+
+      // Build homepage data
+      const fiveDaysAgo = new Date();
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+      const homeDataIndex: any = {
+        data: [],
+        trending: []
+      };
+
+      CATEGORY_MAP.forEach(cat => {
+        const catJobs = categoryGroups[cat.id] || [];
+        // Sort jobs by updatedAt descending
+        catJobs.sort((a: any, b: any) => {
+          const dateA = new Date(a.updatedAt || a.createdAt || a.postDate || 0).getTime();
+          const dateB = new Date(b.updatedAt || b.createdAt || b.postDate || 0).getTime();
+          return dateB - dateA;
+        });
+
+        const catLinks = catJobs.map((job: any) => {
+          const jobDate = new Date(job.updatedAt || job.createdAt || job.postDate || 0);
+          const isRecent = jobDate >= fiveDaysAgo;
+
+          return {
+            id: job.id || `scraped-${Math.random().toString(36).substring(7)}`,
+            title: job.title,
+            url: job.path || job.url,
+            path: job.path || job.url,
+            postDate: job.postDate || new Date().toISOString().split('T')[0],
+            createdAt: job.createdAt || job.scrapedAt || new Date().toISOString(),
+            updatedAt: job.updatedAt || job.scrapedAt || new Date().toISOString(),
+            isNew: isRecent ? (job.isNew || false) : false,
+            isOut: isRecent ? (job.isOut || false) : false
+          };
+        });
+
+        homeDataIndex.data.push({
+          id: cat.id,
+          title: cat.title,
+          links: catLinks
+        });
+
+        console.log(`[REBUILD] Category ${cat.id}: ${catJobs.length} jobs`);
+      });
+
+      // Select top 15 trending jobs
+      homeDataIndex.trending = allDbData
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.updatedAt || a.createdAt || a.postDate || 0).getTime();
+          const dateB = new Date(b.updatedAt || b.createdAt || b.postDate || 0).getTime();
+          return dateB - dateA;
+        })
+        .slice(0, 15)
+        .map((job: any) => {
+          const jobDate = new Date(job.updatedAt || job.createdAt || job.postDate || 0);
+          const isRecent = jobDate >= fiveDaysAgo;
+
+          return {
+            id: job.id || `scraped-${Math.random().toString(36).substring(7)}`,
+            title: job.title,
+            url: job.path || job.url,
+            path: job.path || job.url,
+            postDate: job.postDate || new Date().toISOString().split('T')[0],
+            createdAt: job.createdAt || job.scrapedAt || new Date().toISOString(),
+            updatedAt: job.updatedAt || job.scrapedAt || new Date().toISOString(),
+            isNew: isRecent ? (job.isNew || false) : false,
+            isOut: isRecent ? (job.isOut || false) : false
+          };
+        });
+
+      // Save to Firebase
+      const saveResult = await safeFirestoreOp(async () => {
+        const homeDocRef = doc(adminDb, 'home_data', 'index');
+        await setDoc(homeDocRef, homeDataIndex);
+      }, undefined, 'rebuild home_data save');
+
+      if (!saveResult.success) {
+        return res.status(500).json({ success: false, error: "Failed to save home_data to Firebase" });
+      }
+
+      // Update server cache
+      serverCache.set('home_data_index', homeDataIndex);
+      cache.set('home_data_index', { data: homeDataIndex, timestamp: Date.now() });
+
+      console.log('[REBUILD] Successfully rebuilt home_data from Firebase jobs');
+      res.json({ success: true, message: "Home data rebuilt successfully", stats: {
+        totalJobs: allDbData.length,
+        categories: homeDataIndex.data.map((c: any) => ({ title: c.title, count: c.links.length })),
+        trendingCount: homeDataIndex.trending.length
+      }});
+    } catch (error: any) {
+      console.error('[REBUILD] Error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Get all jobs for admin dashboard
   app.get("/api/admin/jobs", verifyAdmin, async (req, res): Promise<any> => {
     try {
