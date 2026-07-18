@@ -1,8 +1,0 @@
-# GOVEXAM NOTIFICATION
-> Independent educational news portal and government job aggregator.
-
-This website provides the latest updates on government jobs, admit cards, and exam results in India.
-
-## Links
-- [Home Page](https://govexamnotification.online/)
-- [Sitemap](https://govexamnotification.online/sitemap.xml)

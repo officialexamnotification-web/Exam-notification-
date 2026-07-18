@@ -1,6 +1,0 @@
-{
-  "name": "Government Exam Notification Portal",
-  "description": "A comprehensive portal for tracking, searching, and managing government exam results, admit cards, and job notifications with real-time sync.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
