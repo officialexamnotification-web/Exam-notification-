@@ -2906,9 +2906,9 @@ async function startServer() {
       
       let jobData: any = null;
       let firestoreAvailable = false;
-      if (db) {
+      if (adminDb) {
         const result = await safeFirestoreOp(async () => {
-          const jobDocRef = doc(db, 'jobs', cleanId);
+          const jobDocRef = doc(adminDb, 'jobs', cleanId);
           const jobDoc = await getDoc(jobDocRef);
           if (jobDoc.exists()) {
             const data = jobDoc.data();
@@ -2987,9 +2987,9 @@ async function startServer() {
       // Clean up homepage references
       try {
         let homeData: any = null;
-        if (db && firestoreAvailable) {
+        if (adminDb && firestoreAvailable) {
           const homeResult = await safeFirestoreOp(async () => {
-            const homeDocRef = doc(db, 'home_data', 'index');
+            const homeDocRef = doc(adminDb, 'home_data', 'index');
             const homeDoc = await getDoc(homeDocRef);
             if (homeDoc.exists()) return homeDoc.data();
             return null;
@@ -3025,9 +3025,9 @@ async function startServer() {
             if (homeData.trending.length !== before) changed = true;
           }
           if (changed) {
-            if (db && firestoreAvailable) {
+            if (adminDb && firestoreAvailable) {
               await safeFirestoreOp(async () => {
-                const homeDocRef = doc(db, 'home_data', 'index');
+                const homeDocRef = doc(adminDb, 'home_data', 'index');
                 await setDoc(homeDocRef, homeData);
               }, undefined, 'delete cleanup home_data write');
             }
