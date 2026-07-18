@@ -949,53 +949,54 @@ async function startServer() {
       try {
           const $ = cheerio.load(html, null, false);
 
-          // Define sections to keep
-          const sectionsToKeep = [
-              'important dates',
-              'application fee',
-              'various post',
-              'useful links',
-              'important date',
-              'application fees',
-              'various posts',
-              'useful link'
+          // Define section patterns to keep (more flexible matching)
+          const sectionPatterns = [
+              { pattern: /important\s+dates/i, name: 'important dates' },
+              { pattern: /application\s+fee/i, name: 'application fee' },
+              { pattern: /various\s+post/i, name: 'various post' },
+              { pattern: /useful\s+links/i, name: 'useful links' }
           ];
 
-          // Find all headings and their content
-          const sections: any[] = [];
-          $('h1, h2, h3, h4, h5, h6, strong, b').each((i, el) => {
-              const $el = $(el);
-              const text = $el.text().trim().toLowerCase();
-              
-              // Check if this is a section we want to keep
-              const isSectionToKeep = sectionsToKeep.some(section => text.includes(section));
-              
-              if (isSectionToKeep) {
-                  // Collect this section and all following elements until next heading
-                  let sectionContent = $el.clone();
-                  let nextElement = $el.next();
+          // Find and extract only the specific sections
+          let resultHtml = '';
+          
+          sectionPatterns.forEach(({ pattern, name }) => {
+              // Find elements that match the pattern
+              $('*').each((i, el) => {
+                  const $el = $(el);
+                  const text = $el.text().trim();
+                  const tagName = ($el.prop('tagName') || '').toLowerCase();
                   
-                  while (nextElement.length && !['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(nextElement[0].tagName.toLowerCase())) {
-                      sectionContent = sectionContent.add(nextElement.clone());
-                      nextElement = nextElement.next();
+                  // Only check headings
+                  if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'b'].includes(tagName)) {
+                      // Check if this heading matches our pattern
+                      if (pattern.test(text)) {
+                          console.log('[SANITIZER] Found section:', text, 'matching pattern:', name);
+                          
+                          // Extract this section and all following content until next heading
+                          let sectionContent = $el.clone();
+                          let nextElement = $el.next();
+                          
+                          while (nextElement.length && 
+                                 !['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(nextElement[0].tagName.toLowerCase())) {
+                              sectionContent = sectionContent.add(nextElement.clone());
+                              nextElement = nextElement.next();
+                          }
+                          
+                          resultHtml += $.html(sectionContent);
+                      }
                   }
-                  
-                  sections.push({
-                      heading: $el,
-                      content: sectionContent
-                  });
-              }
+              });
           });
 
-          // Remove everything from the body
-          $('body').empty();
-
-          // Add back only the sections we want to keep
-          sections.forEach(section => {
-              $('body').append(section.content);
-          });
-
-          return $.html().trim();
+          console.log('[SANITIZER] Result content length:', resultHtml.length);
+          
+          if (resultHtml.trim().length > 10) {
+              return resultHtml.trim();
+          } else {
+              console.log('[SANITIZER] No content kept, returning empty');
+              return '';
+          }
       } catch (e) {
           console.error('[SANITIZER] Error in sanitizePostContent:', e);
           return html;
@@ -2452,14 +2453,20 @@ async function startServer() {
           }
           
           let cleanContent = data.content || '';
+          console.log('[PAGE_LOAD] Original content length:', cleanContent.length);
+          
           if (!cleanContent || cleanContent.trim() === '') {
               cleanContent = generateHtmlFromStructuredData(data);
           }
           
-          // Apply content cleaning but keep original if cleaning removes everything
+          // Apply content cleaning - force use of sanitized content
           const sanitizedContent = sanitizePostContent(cleanContent);
-          if (sanitizedContent && sanitizedContent.trim().length > 50) {
+          console.log('[PAGE_LOAD] Sanitized content length:', sanitizedContent.length);
+          
+          if (sanitizedContent && sanitizedContent.trim().length > 10) {
               cleanContent = sanitizedContent;
+          } else {
+              console.log('[PAGE_LOAD] Sanitized content too short, using original');
           }
           
           let cleanTitle = data.title || '';
